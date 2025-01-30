@@ -9,6 +9,14 @@ app.get("/", (req,res)=>{
   ])
 })
 
+app.get("/students" ,(req,res)=>{
+    res.send([
+        {
+            student : "Nirmal kumar"
+        }
+    ])
+})
+
 app.listen(2000,()=>{
   console.log("App started...")
 })
