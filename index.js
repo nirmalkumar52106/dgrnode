@@ -19,7 +19,7 @@ app.post("/addcource",async(req,res)=>{
     let cource = new Cource()
     cource.courcename=req.body.courcename;
     cource.courcedescription=req.body.courcedescription;
-   const doc= await user.save()
+   const doc= await cource.save()
    console.log(doc)
     console.log(req.body)
     res.json(req.body)
@@ -28,7 +28,7 @@ app.post("/addcource",async(req,res)=>{
             res.status(200).json({
                 doc:doc,
                 status:true,
-                message:"User Created...!"
+                message:"Cource Created...!"
             })
         }
         else{
