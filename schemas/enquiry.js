@@ -12,6 +12,6 @@ const enquiryschema = new mongoose.Schema({
         status : String,
         createdAt: { type: Date, default: Date.now },
   }); 
-  const Enquiry = mongoose.model('enquiry', CourceSchema);
+  const Enquiry = mongoose.model('enquiry', enquiryschema);
 
   module.exports = Enquiry
