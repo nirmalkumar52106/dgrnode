@@ -2,6 +2,7 @@ const express = require("express")
 const bodyParser = require("body-parser")
 const cors = require("cors");
 const Cource = require("./schemas/CourceSchema");
+const Enquiry = require("./schemas/enquiry");
 
 //main server
 const app = express()
@@ -29,6 +30,41 @@ app.post("/addcource",async(req,res)=>{
                 doc:doc,
                 status:true,
                 message:"Cource Created...!"
+            })
+        }
+        else{
+            res.status(404).json({
+                error:err,
+                message:"Something went wrong"
+            });
+        }
+    }catch(err){ 
+console.log(err)
+    }
+   
+});
+
+//enquiryapis
+app.post("/addenquiry",async(req,res)=>{
+    let enquiry = new Enquiry()
+    enquiry.namee=req.body.namee;
+    enquiry.mobile=req.body.mobile;
+    enquiry.email = req.body.email;
+    enquiry.adress = req.body.adress;
+    enquiry.dob = req.body.dob;
+    enquiry.cource = req.body.cource;
+    enquiry.response = req.body.response;
+    enquiry.status = req.body.status;
+   const doc= await enquiry.save()
+   console.log(doc)
+    console.log(req.body)
+    res.json(req.body)
+    try{
+        if(enquiry){
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"New Enquiry Added...!"
             })
         }
         else{
