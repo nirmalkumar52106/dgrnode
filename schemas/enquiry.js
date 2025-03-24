@@ -8,8 +8,8 @@ const enquiryschema = new mongoose.Schema({
         adress : String,
         dob : String,
         cource :  String,
-        response : String,
-        status : String,
+        responsee : String,
+        statuss : String,
         createdAt: { type: Date, default: Date.now },
   }); 
   const Enquiry = mongoose.model('enquiry', enquiryschema);

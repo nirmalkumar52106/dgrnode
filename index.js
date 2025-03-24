@@ -47,15 +47,15 @@ console.log(err)
 //enquiryapis
 app.post("/addenquiry",async(req,res)=>{
     let enquiry = new Enquiry()
-    enquiry.namee=req.body.namee;
-    enquiry.mobile=req.body.mobile;
+    enquiry.namee = req.body.namee;
+    enquiry.mobile = req.body.mobile;
     enquiry.email = req.body.email;
     enquiry.adress = req.body.adress;
     enquiry.dob = req.body.dob;
     enquiry.cource = req.body.cource;
-    enquiry.response = req.body.response;
-    enquiry.status = req.body.status;
-   const doc= await enquiry.save()
+    enquiry.responsee = req.body.responsee;
+    enquiry.statuss = req.body.statuss;
+   const doc = await enquiry.save()
    console.log(doc)
     console.log(req.body)
     res.json(req.body)
