@@ -79,6 +79,11 @@ console.log(err)
    
 });
 
+app.get("/allenquiry", async (req,res)=>{
+    const user = await Enquiry.find();
+    res.send(user);
+});
+
 app.listen(2000,()=>{
   console.log("App started...")
 })
