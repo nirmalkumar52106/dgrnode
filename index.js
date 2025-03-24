@@ -84,6 +84,27 @@ app.get("/allenquiry", async (req,res)=>{
     res.send(user);
 });
 
+app.delete("/allenquiry/:id",async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const doc = await Enquiry.findByIdAndDelete(id)
+        console.log(req.body);      
+        if(doc){ 
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"Enquiry Deleted...!"
+            })
+        };
+    } catch(err) {
+        res.status(404).json({
+            error:err,
+            message:"Something went wrong"
+        });
+    }
+})
+
+
 app.listen(2000,()=>{
   console.log("App started...")
 })
