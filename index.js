@@ -79,10 +79,14 @@ console.log(err)
    
 });
 
+
+//get
 app.get("/allenquiry", async (req,res)=>{
     const user = await Enquiry.find();
     res.send(user);
 });
+
+//delete
 
 app.delete("/allenquiry/:id",async(req,res)=>{
     try{
@@ -104,6 +108,12 @@ app.delete("/allenquiry/:id",async(req,res)=>{
     }
 })
 
+//get by id
+app.get("/allenquiry/:id", async(req,res)=>{
+    const id = req.params.id;
+    const result = await Enquiry.findOne({_id:id});
+    res.json({"user":result});
+});
 
 app.listen(2000,()=>{
   console.log("App started...")
