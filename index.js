@@ -55,7 +55,8 @@ app.post("/addenquiry",async(req,res)=>{
     enquiry.cource = req.body.cource;
     enquiry.responsee = req.body.responsee;
     enquiry.statuss = req.body.statuss;
-    enquiry.comments = req.body.comments
+    enquiry.comments = req.body.comments;
+    enquiry.enqdate = req.body.enqdate;
    const doc = await enquiry.save()
    console.log(doc)
     console.log(req.body)

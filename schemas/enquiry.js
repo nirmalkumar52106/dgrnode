@@ -11,6 +11,7 @@ const enquiryschema = new mongoose.Schema({
         responsee : String,
         statuss : String,
         comments :  String,
+        enqdate : String,
         createdAt: { type: Date, default: Date.now },
   }); 
   const Enquiry = mongoose.model('enquiry', enquiryschema);
