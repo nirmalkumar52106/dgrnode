@@ -120,7 +120,7 @@ app.get("/allenquiry/:id", async(req,res)=>{
 //enquiry update
 app.patch("/allenquiry/:id", async(req,res)=>{
     const id = req.params.id;
-    const doc = await Enquiry.findByIdAndUpdate(id, req.body)
+    const doc = await Enquiry.findByIdAndUpdate(_id, req.body)
     console.log(doc);
     console.log("patch body",req.body);      
     res.json(req.body);
