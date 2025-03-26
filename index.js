@@ -55,6 +55,7 @@ app.post("/addenquiry",async(req,res)=>{
     enquiry.cource = req.body.cource;
     enquiry.responsee = req.body.responsee;
     enquiry.statuss = req.body.statuss;
+    enquiry.comments = req.body.comments
    const doc = await enquiry.save()
    console.log(doc)
     console.log(req.body)
@@ -113,6 +114,15 @@ app.get("/allenquiry/:id", async(req,res)=>{
     const id = req.params.id;
     const result = await Enquiry.findOne({_id:id});
     res.json({"user":result});
+});
+
+//enquiry update
+server.patch("/employee/:id", async(req,res)=>{
+    const id = req.params.id;
+    const doc = await SignupUser.findByIdAndUpdate(id, req.body)
+    console.log(doc);
+    console.log("patch body",req.body);      
+    res.json(req.body);
 });
 
 app.listen(2000,()=>{
