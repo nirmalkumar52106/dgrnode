@@ -3,6 +3,8 @@ const bodyParser = require("body-parser")
 const cors = require("cors");
 const Cource = require("./schemas/CourceSchema");
 const Enquiry = require("./schemas/enquiry");
+const Blog = require("./schemas/blog");
+
 
 //main server
 const app = express()
@@ -13,36 +15,7 @@ app.use(express.json());
 app.use(cors(origin = "*"));
 require("./schemas/mongodb")
 
-//cource apis
 
-//Add cource
-app.post("/addcource",async(req,res)=>{
-    let cource = new Cource()
-    cource.courcename=req.body.courcename;
-    cource.courcedescription=req.body.courcedescription;
-   const doc= await cource.save()
-   console.log(doc)
-    console.log(req.body)
-    res.json(req.body)
-    try{
-        if(cource){
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"Cource Created...!"
-            })
-        }
-        else{
-            res.status(404).json({
-                error:err,
-                message:"Something went wrong"
-            });
-        }
-    }catch(err){ 
-console.log(err)
-    }
-   
-});
 
 //enquiryapis
 app.post("/addenquiry",async(req,res)=>{
@@ -125,6 +98,49 @@ app.patch("/allenquiry/:id", async(req,res)=>{
     console.log("patch body",req.body);      
     res.json(req.body);
 });
+
+
+//blog post
+app.post("/addblog" ,async(req,res)=>{
+    const blog = new Blog({
+        blogtitle : req.body.blogtitle,
+        blogdesc : req.body.blogdesc,
+        blogimage : req.body.blogimage,
+        blogdate : req.body.blogdate,
+        metatitle : req.body.metatitle,
+        metakey : req.body.metakey,
+        metadesc :  req.body.metadesc,
+        slugurl : req.body.slugurl
+    })
+    
+
+    const doc = await blog.save()
+    console.log(doc)
+     console.log(req.body)
+     res.json(req.body)
+     try{
+         if(blog){
+             res.status(200).json({
+                 doc:doc,
+                 status:true,
+                 message:"New Blog Added...!"
+             })
+         }
+         else{
+             res.status(404).json({
+                 error:err,
+                 message:"Something went wrong"
+             });
+         }
+     }catch(err){ 
+ console.log(err)
+     }
+})
+
+app.get("/allblog",async(req,res)=>{
+    const blogss = await Blog.find()
+    res.send(blogss)
+})
 
 app.listen(2000,()=>{
   console.log("App started...")
