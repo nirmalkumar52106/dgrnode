@@ -10,6 +10,7 @@ const blogschema = new mongoose.Schema({
         metakey : String,
         slugurl : String,
         blogdate : String,
+        createdby : String,
         createdAt: { type: Date, default: Date.now },
   }); 
   const Blog = mongoose.model('blog', blogschema);

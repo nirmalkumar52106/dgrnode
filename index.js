@@ -110,7 +110,8 @@ app.post("/addblog" ,async(req,res)=>{
         metatitle : req.body.metatitle,
         metakey : req.body.metakey,
         metadesc :  req.body.metadesc,
-        slugurl : req.body.slugurl
+        slugurl : req.body.slugurl,
+        createdby : req.body.createdby,
     })
     
 
