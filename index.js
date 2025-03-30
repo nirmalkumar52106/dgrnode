@@ -143,6 +143,22 @@ app.get("/allblog",async(req,res)=>{
     res.send(blogss)
 })
 
+
+//get by idd 
+app.get("/allblog/:id", async(req,res)=>{
+    const slug = req.params.id;
+    const result = await Blog.findOne({slugurl:slug});
+    res.json({result});
+});
+
+
+
+
+
+
+
+
+
 app.listen(2000,()=>{
   console.log("App started...")
 })
