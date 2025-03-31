@@ -155,7 +155,7 @@ app.get("/allblog/:id", async(req,res)=>{
 app.get("/allblog/:id", async(req,res)=>{
     const id = req.params.id;
     const result = await Blog.findOne({_id:id});
-    res.json(result);
+    res.json({"result" : result});
 });
 
 // delete blogs
