@@ -144,12 +144,50 @@ app.get("/allblog",async(req,res)=>{
 })
 
 
-//get by idd 
+//get by slug 
 app.get("/allblog/:id", async(req,res)=>{
     const slug = req.params.id;
     const result = await Blog.findOne({slugurl:slug});
     res.json(result);
 });
+
+//get by id
+app.get("/allblog/:id", async(req,res)=>{
+    const id = req.params.id;
+    const result = await Blog.findOne({_id:id});
+    res.json(result);
+});
+
+// delete blogs
+app.delete("/allblog/:id",async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const doc = await Blog.findByIdAndDelete(id)
+        if(doc){ 
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"Blog Deleted...!"
+            })
+        };
+    } catch(err) {
+        res.status(404).json({
+            error:err,
+            message:"Something went wrong"
+        });
+    }
+})
+
+//update blogs
+app.patch("/allblog/:id", async(req,res)=>{
+    const id = req.params.id;
+    const doc = await Blog.findByIdAndUpdate(id, req.body)
+    if(doc){
+        res.json(req.body);
+    }      
+    
+});
+
 
 app.listen(2000,()=>{
   console.log("App started...")
