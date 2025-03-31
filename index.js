@@ -151,14 +151,6 @@ app.get("/allblog/:id", async(req,res)=>{
     res.json(result);
 });
 
-
-
-
-
-
-
-
-
 app.listen(2000,()=>{
   console.log("App started...")
 })
