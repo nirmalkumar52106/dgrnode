@@ -149,6 +149,7 @@ app.get("/allblog/:id", async(req,res)=>{
     const slug = req.params.id;
     const result = await Blog.findOne({slugurl:slug});
     res.json(result);
+    res.send(result)
 });
 
 //get by id
