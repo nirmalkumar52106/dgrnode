@@ -4,6 +4,7 @@ const cors = require("cors");
 const Cource = require("./schemas/CourceSchema");
 const Enquiry = require("./schemas/enquiry");
 const Blog = require("./schemas/blog");
+const Users = require("./schemas/students");
 
 
 //main server
@@ -187,6 +188,49 @@ app.patch("/allblog/:id", async(req,res)=>{
     }      
     
 });
+
+
+app.post("/signup" ,async(req,res)=>{
+    const users = new Users({
+        firstname : req.body.firstname,
+        lastname : req.body.lastname,
+        useremail : req.body.useremail,
+        usermobile : req.body.usermobile,
+        password : req.body.password,
+        confirmpassword : req.body.confirmpassword,
+        image :  req.body.image,
+    })
+    
+
+    const doc = await users.save()
+     res.json(req.body)
+     try{
+         if(users){
+             res.status(200).json({
+                 doc:doc,
+                 status:true,
+                 message:"User Signup successfulyy...!"
+             })
+         }
+         else{
+             res.status(404).json({
+                 error:err,
+                 message:"Something went wrong"
+             });
+         }
+     }catch(err){ 
+ console.log(err)
+     }
+})
+
+
+app.get("/login" , async(req,res)=>{
+
+    const allusers = await Users.find()
+    res.send(allusers)
+
+})
+
 
 
 app.listen(2000,()=>{
