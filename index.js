@@ -5,6 +5,7 @@ const Cource = require("./schemas/CourceSchema");
 const Enquiry = require("./schemas/enquiry");
 const Blog = require("./schemas/blog");
 const Users = require("./schemas/students");
+const Dgr = require("./schemas/dgr");
 
 
 //main server
@@ -225,13 +226,44 @@ app.post("/signup" ,async(req,res)=>{
 
 
 app.get("/login" , async(req,res)=>{
-
     const allusers = await Users.find()
     res.send(allusers)
-
 })
 
 
+//dgrapi
+app.post("/remove" ,async(req,res)=>{
+    const textapi = new Dgr({
+        text : req.body.text,
+    })
+    
+
+    const doc = await textapi.save()
+     res.json(req.body)
+     try{
+         if(textapi){
+             res.status(200).json({
+                 doc:doc,
+                 status:true,
+                 message:"removed"
+             })
+         }
+         else{
+             res.status(404).json({
+                 error:err,
+                 message:"Something went wrong"
+             });
+         }
+     }catch(err){ 
+ console.log(err)
+     }
+})
+
+
+app.get("/getremovedata" , async(req,res)=>{
+    const textapi = await Dgr.find()
+    res.send(textapi)
+})
 
 app.listen(2000,()=>{
   console.log("App started...")

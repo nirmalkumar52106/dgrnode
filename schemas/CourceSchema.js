@@ -1,5 +1,5 @@
 
-const mongoose=require("mongoose")
+const mongoose=require("mongoose") 
 
 const CourceSchema = new mongoose.Schema({
     courcename : String,
