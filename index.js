@@ -6,6 +6,7 @@ const Enquiry = require("./schemas/enquiry");
 const Blog = require("./schemas/blog");
 const Users = require("./schemas/students");
 const Dgr = require("./schemas/dgr");
+const Course = require("./schemas/course");
 
 
 //main server
@@ -19,7 +20,7 @@ require("./schemas/mongodb")
 
 
 
-//enquiryapis
+//enquiryapis###################################################################
 app.post("/addenquiry",async(req,res)=>{
     let enquiry = new Enquiry()
     enquiry.namee = req.body.namee;
@@ -95,14 +96,12 @@ app.get("/allenquiry/:id", async(req,res)=>{
 //enquiry update
 app.patch("/allenquiry/:id", async(req,res)=>{
     const id = req.params.id;
-    const doc = await Enquiry.findByIdAndUpdate(id, req.body)
-    console.log(doc);
-    console.log("patch body",req.body);      
+    const doc = await Enquiry.findByIdAndUpdate(id, req.body)     
     res.json(req.body);
 });
 
 
-//blog post
+//blog post####################################################################
 app.post("/addblog" ,async(req,res)=>{
     const blog = new Blog({
         blogtitle : req.body.blogtitle,
@@ -264,6 +263,81 @@ app.get("/getremovedata" , async(req,res)=>{
     const textapi = await Dgr.find()
     res.send(textapi)
 })
+
+
+//add courses##############################################################################
+app.post("/addcourse" ,async(req,res)=>{
+    const course = new Course({
+        cardimage : req.body.cardimage,
+        coursecategory : req.body.coursecategory,
+        courcedesc : req.body.courcedesc,
+        courcecreatedby : req.body.courcecreatedby,
+        courceprice : req.body.courceprices,
+        createdby : req.body.createdby,
+    })
+    
+
+    const doc = await course.save()
+    console.log(doc)
+     console.log(req.body)
+     res.json(req.body)
+     try{
+         if(course){
+             res.status(200).json({
+                 doc:doc,
+                 status:true,
+                 message:"New Course Added...!"
+             })
+         }
+         else{
+             res.status(404).json({
+                 error:err,
+                 message:"Something went wrong"
+             });
+         }
+     }catch(err){ 
+ console.log(err)
+     }
+})
+
+app.get("/allcourse",async(req,res)=>{
+    const courses = await Course.find()
+    res.send(courses)
+})
+
+
+app.patch("/allcourse/:id", async(req,res)=>{
+    const id = req.params.id;
+    const doc = await Course.findByIdAndUpdate(id, req.body)     
+    res.json(req.body);
+});
+
+app.delete("/allcourse/:id",async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const doc = await Course.findByIdAndDelete(id)      
+        if(doc){ 
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"Course Deleted...!"
+            })
+        };
+    } catch(err) {
+        res.status(404).json({
+            error:err,
+            message:"Something went wrong"
+        });
+    }
+})
+
+//get by id
+app.get("/allcourse/:id", async(req,res)=>{
+    const id = req.params.id;
+    const result = await Course.findOne({_id:id});
+    res.json({"user":result});
+});
+
 
 app.listen(2000,()=>{
   console.log("App started...")
