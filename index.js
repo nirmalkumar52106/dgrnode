@@ -272,7 +272,7 @@ app.post("/addcourse" ,async(req,res)=>{
         coursecategory : req.body.coursecategory,
         courcedesc : req.body.courcedesc,
         courcecreatedby : req.body.courcecreatedby,
-        courceprice : req.body.courceprices,
+        courceprice : req.body.courceprice,
         createdby : req.body.createdby,
     })
     
