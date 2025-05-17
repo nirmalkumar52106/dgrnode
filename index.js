@@ -1,14 +1,13 @@
 const express = require("express")
 const bodyParser = require("body-parser")
 const cors = require("cors");
-const Cource = require("./schemas/CourceSchema");
 const Enquiry = require("./schemas/enquiry");
 const Blog = require("./schemas/blog");
 const Users = require("./schemas/students");
 const Dgr = require("./schemas/dgr");
-const Course = require("./schemas/course");
+const { Course, Instructor, Curriculum } = require("./schemas/course");
 
-
+ 
 //main server
 const app = express()
 
@@ -267,37 +266,96 @@ app.get("/getremovedata" , async(req,res)=>{
 
 //add courses##############################################################################
 app.post("/addcourse" ,async(req,res)=>{
-    const course = new Course({
-        cardimage : req.body.cardimage,
-        coursecategory : req.body.coursecategory,
-        courcedesc : req.body.courcedesc,
-        courcecreatedby : req.body.courcecreatedby,
-        courceprice : req.body.courceprice,
-        createdby : req.body.createdby,
-    })
+    try {
+    const { cardimage ,
+         coursecategory , 
+         courcedesc ,
+          courcecreatedby
+          , courceprice , 
+          instructor, 
+          curriculum ,
+        courseoverview,
+       whatyoulearn,
+       slug,
+      title,
+      metatitle,
+      metadescription,
+      metakeyword,
+      coursestatus
+} = req.body;
+
+    // Step 1: Create Instructor
+    const newInstructor = new Instructor(instructor)
+    await newInstructor.save();
+
+  
+    const curriculumIds = [];
+    for (const item of curriculum) {
+      const newCurriculum = new Curriculum(item);
+      await newCurriculum.save();
+      curriculumIds.push(newCurriculum._id);
+    }
+
+    
+    const newCourse = new Course({
+      cardimage : cardimage,
+      coursecategory : coursecategory,
+      courcedesc : courcedesc,
+      courcecreatedby : courcecreatedby,
+      courceprice : courceprice,
+      courseoverview : courseoverview,
+      whatyoulearn : whatyoulearn,
+      slug : slug,
+      title : title,
+      metatitle : metatitle,
+      metadescription : metadescription,
+      metakeyword : metakeyword,
+      coursestatus : coursestatus,
+      instructor: newInstructor._id,
+      curriculum: curriculumIds,
+    });
+
+    await newCourse.save();
+
+    res.status(201).json({ message: "Course created successfully", course: newCourse });
+  } catch (error) {
+    console.error("Error creating course:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+
+
+//     const course = new Course({
+//         cardimage : req.body.cardimage,
+//         coursecategory : req.body.coursecategory,
+//         courcedesc : req.body.courcedesc,
+//         courcecreatedby : req.body.courcecreatedby,
+//         courceprice : req.body.courceprice,
+//         instructor : req.body.instructor,
+//         createdby : req.body.createdby,
+//     })
     
 
-    const doc = await course.save()
-    console.log(doc)
-     console.log(req.body)
-     res.json(req.body)
-     try{
-         if(course){
-             res.status(200).json({
-                 doc:doc,
-                 status:true,
-                 message:"New Course Added...!"
-             })
-         }
-         else{
-             res.status(404).json({
-                 error:err,
-                 message:"Something went wrong"
-             });
-         }
-     }catch(err){ 
- console.log(err)
-     }
+//     const doc = await course.save()
+//     console.log(doc)
+//      console.log(req.body)
+//      res.json(req.body)
+//      try{
+//          if(course){
+//              res.status(200).json({
+//                  doc:doc,
+//                  status:true,
+//                  message:"New Course Added...!"
+//              })
+//          }
+//          else{
+//              res.status(404).json({
+//                  error:err,
+//                  message:"Something went wrong"
+//              });
+//          }
+//      }catch(err){ 
+//  console.log(err)
+//      }
 })
 
 app.get("/allcourse",async(req,res)=>{
@@ -333,10 +391,43 @@ app.delete("/allcourse/:id",async(req,res)=>{
 
 //get by id
 app.get("/allcourse/:id", async(req,res)=>{
-    const id = req.params.id;
-    const result = await Course.findOne({_id:id});
-    res.json({"user":result});
+    try {
+        
+    const course = await Course.findById(req.params.id)
+      .populate("instructor") 
+      .populate("curriculum");
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.json(course);
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    res.status(500).json({ message: "Server error" });
+  }
 });
+
+//get by slug
+app.get("/allcourses/:id", async(req,res)=>{
+    try {
+        const slug = req.params.id;
+    const course = await Course.findOne({slug:slug})
+      .populate("instructor") 
+      .populate("curriculum");
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    res.json(course);
+  } catch (error) {
+    console.error("Error fetching course:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 
 app.listen(2000,()=>{
