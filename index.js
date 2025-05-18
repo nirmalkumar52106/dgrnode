@@ -6,6 +6,7 @@ const Blog = require("./schemas/blog");
 const Users = require("./schemas/students");
 const Dgr = require("./schemas/dgr");
 const { Course, Instructor, Curriculum } = require("./schemas/course");
+const WebEnq = require("./schemas/webEnquiry");
 
  
 //main server
@@ -142,7 +143,7 @@ app.get("/allblog",async(req,res)=>{
     const blogss = await Blog.find()
     res.send(blogss)
 })
-
+ 
 
 //get by slug 
 app.get("/allblog/:id", async(req,res)=>{
@@ -427,6 +428,63 @@ app.get("/allcourses/:id", async(req,res)=>{
   }
 });
 
+//website Enquiry Api
+//enquiryapis###################################################################
+app.post("/webaddenq",async(req,res)=>{
+    let webenquiry = new WebEnq()
+    webenquiry.enqname = req.body.enqname;
+    webenquiry.enqmobile = req.body.enqmobile;
+    webenquiry.enqemail = req.body.enqemail;
+    webenquiry.enqCourse = req.body.enqCourse;
+   const doc = await webenquiry.save()
+    res.json(req.body)
+    try{
+        if(webenquiry){
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"New Enquiry Added...!"
+            })
+        }
+        else{
+            res.status(404).json({
+                error:err,
+                message:"Something went wrong"
+            });
+        }
+    }catch(err){ 
+console.log(err)
+    }
+   
+});
+
+
+//get
+app.get("/allwebaddenq", async (req,res)=>{
+    const webenqq = await WebEnq.find();
+    res.send(webenqq);
+});
+
+//delete
+
+app.delete("/allwebaddenq/:id",async(req,res)=>{
+    try{
+        const id = req.params.id;
+        const doc = await WebEnq.findByIdAndDelete(id)      
+        if(doc){ 
+            res.status(200).json({
+                doc:doc,
+                status:true,
+                message:"Enquiry Deleted...!"
+            })
+        };
+    } catch(err) {
+        res.status(404).json({
+            error:err,
+            message:"Something went wrong"
+        });
+    }
+})
 
 
 
