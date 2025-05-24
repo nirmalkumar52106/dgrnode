@@ -436,6 +436,7 @@ app.post("/webaddenq",async(req,res)=>{
     webenquiry.enqmobile = req.body.enqmobile;
     webenquiry.enqemail = req.body.enqemail;
     webenquiry.enqCourse = req.body.enqCourse;
+    webenquiry.enqDate =  new Date();
    const doc = await webenquiry.save()
     res.json(req.body)
     try{
@@ -455,9 +456,7 @@ app.post("/webaddenq",async(req,res)=>{
     }catch(err){ 
 console.log(err)
     }
-   
 });
-
 
 //get
 app.get("/allwebaddenq", async (req,res)=>{
