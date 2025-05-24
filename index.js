@@ -437,6 +437,7 @@ app.post("/webaddenq",async(req,res)=>{
     webenquiry.enqemail = req.body.enqemail;
     webenquiry.enqCourse = req.body.enqCourse;
     webenquiry.enqDate =  new Date();
+    webenquiry.isRead =  false;
    const doc = await webenquiry.save()
     res.json(req.body)
     try{
@@ -457,6 +458,21 @@ app.post("/webaddenq",async(req,res)=>{
 console.log(err)
     }
 });
+
+//notify enquiry
+app.put("/markenquiryread/:id", async (req, res) => {
+  try {
+    const result = await WebEnq.findByIdAndUpdate(
+      req.params.id,
+      { isRead: true },
+      { new: true }
+    );
+    res.json({ status: true, data: result });
+  } catch (err) {
+    res.status(500).json({ status: false, error: err });
+  }
+});
+
 
 //get
 app.get("/allwebaddenq", async (req,res)=>{
