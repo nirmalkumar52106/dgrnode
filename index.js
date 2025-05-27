@@ -3,10 +3,13 @@ const bodyParser = require("body-parser")
 const cors = require("cors");
 const Enquiry = require("./schemas/enquiry");
 const Blog = require("./schemas/blog");
-const Users = require("./schemas/students");
 const Dgr = require("./schemas/dgr");
 const { Course, Instructor, Curriculum } = require("./schemas/course");
 const WebEnq = require("./schemas/webEnquiry");
+const Student = require("./schemas/student");
+const bcrypt = require('bcryptjs');
+const Attendence = require("./schemas/attendence");
+
 
  
 //main server
@@ -17,6 +20,293 @@ app.use(bodyParser.json());
 app.use(express.json());
 app.use(cors(origin = "*"));
 require("./schemas/mongodb")
+
+
+
+//student register
+app.post("/studentregister", async (req, res) => {
+  try {
+    const { studentId, password, name, email, mobile , parentMobile, address } = req.body;
+
+    const existing = await Student.findOne({ studentId });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Student already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newStudent = new Student({
+      studentId,
+      password: hashedPassword,
+      name,
+      email,
+      mobile,
+      parentMobile,
+      address
+    });
+
+    await newStudent.save();
+    res.status(200).json({ success: true, message: "Student registered successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Registration failed", error: error.message });
+  }
+});
+
+//student login api
+// app.post("/studentlogin", async (req, res) => {
+//   const { studentId, password } = req.body;
+
+//   const student = await Student.findOne({ studentId });
+//   if (!student) return res.status(404).send("Student not found");
+
+//   const isMatch = await bcrypt.compare(password, student.password);
+//   if (!isMatch) return res.status(401).send("Invalid credentials");
+
+//   const token = jwt.sign({ id: student._id }, "secretKey", { expiresIn: "1d" });
+
+//   res.json({
+//     token,
+//     student: {
+//       studentId: student.studentId,
+//       name: student.name,
+//       email: student.email
+//     }
+//   });
+// });
+
+
+//all student
+app.get("/allstudents", async (req, res) => {
+  try {
+    const students = await Student.find({});
+    res.status(200).json({ success: true, students });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch students" });
+  }
+});
+
+app.get('/get-student', async (req, res) => {
+  const { studentId } = req.query;
+
+  try {
+    const student = await Student.findOne({ studentId });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+
+    res.json({ success: true, student });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
+//student attendence
+app.post('/markattendance', async (req, res) => {
+  try {
+    let { attendance } = req.body;
+
+    if (!Array.isArray(attendance)) {
+      attendance = [attendance];
+    }
+
+    for (const entry of attendance) {
+      const { studentId, date, status } = entry;
+
+      // Check existing attendance
+      const existing = await Attendence.findOne({ studentId, date });
+
+      if (existing) {
+        await Attendence.updateOne({ _id: existing._id }, { $set: { status } });
+      } else {
+        const newEntry = new Attendence({ studentId, date, status });
+        await newEntry.save();
+      }
+    }
+    res.status(200).json({ success: true, message: 'Attendance processed & SMS sent (if Absent)' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
+//attendence summary
+app.get('/attendance-summary/:date', async (req, res) => {
+  const { date } = req.params;
+  const formattedDate = new Date(date).toISOString().split('T')[0]; // format date
+
+  try {
+    const allAttendance = await Attendence.find({ date: formattedDate });
+
+    const total = allAttendance.length;
+    const present = allAttendance.filter(a => a.status === 'Present').length;
+    const absent = allAttendance.filter(a => a.status === 'Absent').length;
+
+    res.json({
+      success: true,
+      date: formattedDate,
+      total,
+      present,
+      absent
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error fetching summary' });
+  }
+});
+
+// Get Attendance for a Student
+app.get('/attendance/:studentId', async (req, res) => {
+  try {
+    const attendance = await Attendence.find({ studentId: req.params.studentId }).sort({ date: -1 });
+    res.status(200).json({ success: true, data: attendance });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+//get attendence per day
+app.get('/studentswithtodayattendance', async (req, res) => {
+  try {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch all attendance records for today
+    const attendanceRecords = await Attendence.find({ date: today });
+
+    // Map studentId to attendance status
+    const attendanceMap = {};
+    attendanceRecords.forEach(record => {
+      attendanceMap[record.studentId] = record.status; // e.g. "Present" or "Absent"
+    });
+
+    // Fetch all students
+    const students = await Student.find({});
+
+    // Combine students with attendance info
+    const result = students.map(student => ({
+      studentId: student.studentId,
+      name: student.name,
+      email: student.email,
+      mobile: student.mobile,
+      parentEmail: student.parentEmail,
+      address: student.address,
+      attendance: attendanceMap[student.studentId] || 'Not Marked'
+    }));
+
+    res.json({ success: true, students: result });
+  } catch (error) {
+    console.error("Error fetching students with attendance:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+//update attendence
+app.post('/updateattendance', async (req, res) => {
+  try {
+    const { studentId, status } = req.body;
+    if (!studentId || !status) return res.json({ success: false, message: 'Missing data' });
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const existing = await Attendence.findOne({ studentId, date: today });
+
+    if (existing) {
+      existing.status = status;
+      await existing.save();
+    } else {
+      const newAttendance = new Attendence({ studentId, date: today, status });
+      await newAttendance.save();
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: 'Error updating attendance' });
+  }
+});
+
+//get by date attendence
+app.get('/getattendance/:studentId', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const attendanceRecords = await Attendence.find({ studentId }).sort({ date: 1 }); // oldest to newest
+    res.json({ success: true, attendance: attendanceRecords });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: 'Error fetching attendance' });
+  }
+});
+
+
+//fees pay
+app.post('/update-fees', async (req, res) => {
+  const { studentId, total, paid = 0, dueDate, emi } = req.body;
+
+  try {
+    const student = await Student.findOne({ studentId });
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+
+    student.fees.total = total;
+    student.fees.paid = paid;
+    student.fees.dueDate = dueDate;
+    student.fees.emi = emi;
+    if (!student.fees.paymentHistory) student.fees.paymentHistory = [];
+
+    await student.save();
+    res.json({ success: true, message: 'Fees info updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+
+//pay fees
+// POST /payfees
+// Request body: { studentId, amount, mode }
+app.post('/payfees', async (req, res) => {
+  const { studentId, amount, mode } = req.body;
+
+  if (!studentId || !amount || !mode) {
+    return res.status(400).json({ success: false, message: 'Please provide studentId, amount, and mode' });
+  }
+
+  try {
+    // Find student by studentId
+    const student = await Student.findOne({ studentId });
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Check if amount is valid and does not exceed due amount
+    const dueAmount = (student.fees.total || 0) - (student.fees.paid || 0);
+    if (amount <= 0) {
+      return res.status(400).json({ success: false, message: 'Amount must be greater than zero' });
+    }
+    if (amount > dueAmount) {
+      return res.status(400).json({ success: false, message: `Amount exceeds due fees. Due amount is ${dueAmount}` });
+    }
+
+    // Add payment to paymentHistory
+    student.fees.paymentHistory.push({
+      amount,
+      date: new Date(),
+      mode,
+    });
+
+    // Update paid amount
+    student.fees.paid = (student.fees.paid || 0) + amount;
+
+    await student.save();
+
+    return res.json({ success: true, message: 'Fees paid successfully' });
+  } catch (err) {
+    console.error('Pay fees error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
 
 
 
@@ -189,45 +479,6 @@ app.patch("/allblog/:id", async(req,res)=>{
     
 });
 
-
-app.post("/signup" ,async(req,res)=>{
-    const users = new Users({
-        firstname : req.body.firstname,
-        lastname : req.body.lastname,
-        useremail : req.body.useremail,
-        usermobile : req.body.usermobile,
-        password : req.body.password,
-        confirmpassword : req.body.confirmpassword,
-        image :  req.body.image,
-    })
-    
-
-    const doc = await users.save()
-     res.json(req.body)
-     try{
-         if(users){
-             res.status(200).json({
-                 doc:doc,
-                 status:true,
-                 message:"User Signup successfulyy...!"
-             })
-         }
-         else{
-             res.status(404).json({
-                 error:err,
-                 message:"Something went wrong"
-             });
-         }
-     }catch(err){ 
- console.log(err)
-     }
-})
-
-
-app.get("/login" , async(req,res)=>{
-    const allusers = await Users.find()
-    res.send(allusers)
-})
 
 
 //dgrapi
