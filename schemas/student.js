@@ -18,7 +18,7 @@ const studentSchema = new mongoose.Schema({
     {
       amount: Number,
       date: Date,
-      mode: String // Cash / UPI / Card etc.
+      mode: String 
     }
   ]
 },

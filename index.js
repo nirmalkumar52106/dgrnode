@@ -8,6 +8,7 @@ const { Course, Instructor, Curriculum } = require("./schemas/course");
 const WebEnq = require("./schemas/webEnquiry");
 const Student = require("./schemas/student");
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const Attendence = require("./schemas/attendence");
 
 
@@ -52,27 +53,90 @@ app.post("/studentregister", async (req, res) => {
   }
 });
 
-//student login api
-// app.post("/studentlogin", async (req, res) => {
-//   const { studentId, password } = req.body;
+//student login
+app.post("/student-login", async (req, res) => {
+  const { studentId, password } = req.body;
 
-//   const student = await Student.findOne({ studentId });
-//   if (!student) return res.status(404).send("Student not found");
+  try {
+    const student = await Student.findOne({ studentId });
 
-//   const isMatch = await bcrypt.compare(password, student.password);
-//   if (!isMatch) return res.status(401).send("Invalid credentials");
+    if (!student) {
+      return res.status(401).json({ success: false, message: "Student ID not found" });
+    }
 
-//   const token = jwt.sign({ id: student._id }, "secretKey", { expiresIn: "1d" });
+    const isMatch = await bcrypt.compare(password, student.password);
 
-//   res.json({
-//     token,
-//     student: {
-//       studentId: student.studentId,
-//       name: student.name,
-//       email: student.email
-//     }
-//   });
-// });
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    } 
+
+    const token = jwt.sign(
+      { id: student._id },
+      "jdbinfotech", 
+      { expiresIn: "1d" }
+    );
+
+    res.json({ success: true, token });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+//student profile
+app.get('/student-profile', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.json({ success: false, message: 'Unauthorized' });
+
+  try {
+    const decoded = jwt.verify(token, 'jdbinfotech'); 
+    const student = await Student.findById(decoded.id);
+    res.json({ success: true, student });
+  } catch (err) {
+    res.json({ success: false, message: 'Invalid token' });
+  }
+});
+
+//student update password
+app.put("/student-update-password", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+  try {
+    const decoded = jwt.verify(token, "jdbinfotech");
+    console.log("Decoded JWT:", decoded);
+
+    const student = await Student.findById(decoded.id);
+    console.log("Student found:", student);
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    console.log("Current password from client:", currentPassword);
+
+    const isMatch = await bcrypt.compare(currentPassword, student.password);
+    console.log("Password match:", isMatch);
+
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect" });
+    }
+
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    student.password = hashedNewPassword;
+    await student.save();
+
+    res.json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+
 
 
 //all student
