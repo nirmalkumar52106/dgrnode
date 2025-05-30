@@ -22,7 +22,7 @@ const studentSchema = new mongoose.Schema({
     }
   ]
 },
-  attendance: [
+  attendance: [ 
     {
       date: Date,
       status: String, // "Present" or "Absent"

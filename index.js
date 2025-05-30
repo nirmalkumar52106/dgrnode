@@ -10,6 +10,10 @@ const Student = require("./schemas/student");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Attendence = require("./schemas/attendence");
+const Testt = require('./schemas/testsubmit');
+const TestResult = require("./schemas/testsubmit");
+const Test = require("./schemas/testschema");
+
 
 
  
@@ -136,10 +140,171 @@ app.put("/student-update-password", async (req, res) => {
   }
 });
 
+//verify student
+const verifyStudent = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ success: false, message: "No token" });
+
+  try {
+    const decoded = jwt.verify(token, "jdbinfotech");
+    req.studentId = decoded.studentId;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid token" });
+  }
+};
+
+app.get("/student-attendance", verifyStudent, async (req, res) => {
+  try {
+    const student = await Student.findOne({ studentId: req.studentId });
+
+    if (!student) return res.status(404).json({ success: false, message: "Student not found" });
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const monthlyAttendance = student.attendance.filter((entry) => {
+      const date = new Date(entry.date);
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    });
+
+    res.json({ success: true, attendance: monthlyAttendance });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Error fetching attendance" });
+  }
+});
+ 
+// Admin uploads a new test
+app.post("/create-test", async (req, res) => {
+  try {
+    const test = new Test(req.body);
+    await test.save();
+    res.json({ success: true, test });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+//all test
+app.get("/tests", async (req, res) => {
+  const tests = await Test.find().sort({ date: -1 });
+  res.json({ success: true, tests });
+});
+
+//delete
+app.delete('/tests/:id', async (req, res) => {
+  try {
+    const deletedTest = await Test.findByIdAndDelete(req.params.id);
+
+    if (!deletedTest) return res.status(404).json({ message: 'Test not found' });
+
+    res.json({ message: 'Test deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error deleting test' });
+  }
+}); 
+
+//find by id
+app.get('/tests/:id', async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id);
+    if (!test) {
+      return res.status(404).json({ message: 'Test not found' });
+    }
+    res.json(test);
+  } catch (err) {
+    console.error('Error fetching test by ID:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//edit test
+app.put('/tests/:id', async (req, res) => {
+  try {
+    const { title, startDateTime } = req.body;
+
+    const updatedTest = await Test.findByIdAndUpdate(
+      req.params.id,
+      { title, startDateTime },
+      { new: true }
+    );
+
+    if (!updatedTest) {
+      return res.status(404).json({ message: 'Test not found' });
+    }
+
+    res.json(updatedTest);
+  } catch (err) {
+    console.error('Update Error:', err);
+    res.status(500).json({ message: 'Failed to update test' });
+  }
+});
 
 
 
-//all student
+//submit test
+app.post("/submit-test", async (req, res) => {
+  const { studentId, testId, answers } = req.body;
+  const test = await Test.findById(testId);
+
+  let score = 0;
+  test.questions.forEach((q, index) => {
+    if (q.correctAnswer === answers[index]) score++;
+  });
+
+  const submission = new TestResult({ studentId, testId, answers, score });
+  await submission.save();
+
+  res.json({ success: true, score });
+});
+
+//submission get for admin panel
+app.get('/test/:testId', async (req, res) => {
+  try {
+    const submissions = await TestResult.find({ testId: req.params.testId })
+      .sort({ score: -1 })
+      .lean();
+
+    res.json(submissions);
+  } catch (err) {
+    console.error("Get Submissions Error:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+//test by id 
+app.get("/test-history/:studentId", async (req, res) => {
+  try {
+    const submissions = await TestResult.find({ studentId : req.params.studentId }).populate("testId")
+    res.json({ success: true, submissions });
+  } catch (err) {
+    console.error("Get Submissions Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch submissions" });
+  }
+});
+
+//select ids
+app.get('/testssss', async (req, res) => {
+  try {
+    const tests = await Test.find({}, '_id title'); // only return _id and title
+    res.json({ tests });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tests' });
+  }
+});
+
+//top students
+app.get("/leaderboard/:testId", async (req, res) => {
+  const top3 = await TestResult.find({ testId: req.params.testId })
+    .sort({ score: -1 })
+    .limit(3)
+    .select("studentId score");
+  res.json({ success: true, leaderboard: top3 });
+});
+
+
+//all student 
 app.get("/allstudents", async (req, res) => {
   try {
     const students = await Student.find({});
