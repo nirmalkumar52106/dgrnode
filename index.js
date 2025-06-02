@@ -293,7 +293,7 @@ app.get('/testssss', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tests' });
   }
 });
-
+ 
 //top students
 app.get("/leaderboard/:testId", async (req, res) => {
   const top3 = await TestResult.find({ testId: req.params.testId })
@@ -302,6 +302,25 @@ app.get("/leaderboard/:testId", async (req, res) => {
     .select("studentId score");
   res.json({ success: true, leaderboard: top3 });
 });
+
+app.get("/test/student/:studentId", async (req, res) => {
+  const { studentId } = req.params;
+
+  try {
+    const submissions = await TestResult.find({ studentId }).select("testId studentId");
+
+    if (!submissions || submissions.length === 0) {
+      return res.status(200).json([]); // Always return array
+    }
+
+    res.status(200).json(submissions);
+  } catch (error) {
+    console.error("Error fetching submissions:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 
 //all student 
