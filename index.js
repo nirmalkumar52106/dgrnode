@@ -13,7 +13,7 @@ const Attendence = require("./schemas/attendence");
 const Testt = require('./schemas/testsubmit');
 const TestResult = require("./schemas/testsubmit");
 const Test = require("./schemas/testschema");
-
+const nodemailer = require('nodemailer');
 
 
  
@@ -244,6 +244,22 @@ app.put('/tests/:id', async (req, res) => {
 
 
 //submit test
+// app.post("/submit-test", async (req, res) => {
+//   const { studentId, testId, answers } = req.body;
+//   const test = await Test.findById(testId);
+
+//   let score = 0;
+//   test.questions.forEach((q, index) => {
+//     if (q.correctAnswer === answers[index]) score++;
+//   });
+
+//   const submission = new TestResult({ studentId, testId, answers, score });
+//   await submission.save();
+
+//   res.json({ success: true, score });
+// });
+
+
 app.post("/submit-test", async (req, res) => {
   const { studentId, testId, answers } = req.body;
   const test = await Test.findById(testId);
@@ -255,6 +271,52 @@ app.post("/submit-test", async (req, res) => {
 
   const submission = new TestResult({ studentId, testId, answers, score });
   await submission.save();
+
+  // 👇 Fetch student info (assumes Student model has email and name)
+  const student = await Student.findOne({ studentId });
+
+  // 📨 Nodemailer setup using your Gmail
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: 'jdbinfotechsolution@gmail.com',
+      pass: 'jbsafvdrdxacqynq',
+    },
+  });
+
+  const mailOptions = {
+    from: '"JDB Infotech" <jdbinfotechsolution@gmail.com>',
+    to: student.email,
+    subject: 'Your Test Submission Confirmation - JDB Infotech',
+    html: `
+      <h2>✅ Test Submitted Successfully!</h2>
+      <p>Dear <strong>${student.name}</strong>,</p>
+
+      <p>Thank you for attempting the test titled <strong>${test.title}</strong>.</p>
+      <p><strong>Your Score:</strong> ${score} / ${test.questions.length}</p>
+
+      <hr/>
+      <p>We appreciate your effort and dedication. Keep learning and growing with <strong>JDB Infotech</strong>.</p>
+
+      <h4>📞 Contact Details:</h4>
+      <p>
+        <strong>JDB Infotech</strong><br/>
+        305, 3rd Floor, Pink City2,<br/>
+        Joshi Marg, Jhotwara, Jaipur, Rajasthan 302012<br/>
+        📞 +91-7073734854<br/>
+        🌐 www.jdbinfotech.co.in
+      </p>
+
+      <p style="color: gray; font-size: 13px;">This is an automated email. Please do not reply.</p>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('📧 Email sent to student successfully!');
+  } catch (emailErr) {
+    console.error('❌ Failed to send email:', emailErr);
+  }
 
   res.json({ success: true, score });
 });
