@@ -6,7 +6,7 @@ const blogschema = new mongoose.Schema({
         blogdesc : String,
         blogimage :  String,
         metatitle : String,
-        metadesc :  String,
+        metadesc :  String, 
         metakey : String,
         slugurl : String,
         blogdate : String,

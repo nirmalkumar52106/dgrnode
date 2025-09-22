@@ -272,10 +272,10 @@ app.post("/submit-test", async (req, res) => {
   const submission = new TestResult({ studentId, testId, answers, score });
   await submission.save();
 
-  // 👇 Fetch student info (assumes Student model has email and name)
+  
   const student = await Student.findOne({ studentId });
 
-  // 📨 Nodemailer setup using your Gmail
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -739,10 +739,15 @@ app.post("/addblog" ,async(req,res)=>{
      }
 })
 
-app.get("/allblog",async(req,res)=>{
-    const blogss = await Blog.find()
-    res.send(blogss)
-})
+app.get("/allblog", async (req, res) => {
+  try {
+    const blogss = await Blog.find().sort({ blogdate: -1 }); // latest first
+    res.status(200).json(blogss);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching blogs", error: err.message });
+  }
+});
+
  
 
 //get by slug 
