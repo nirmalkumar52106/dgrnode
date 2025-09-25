@@ -748,6 +748,7 @@ app.get("/allblog", async (req, res) => {
   }
 });
 
+
  
 
 //get by slug 
@@ -1066,6 +1067,57 @@ app.delete("/allwebaddenq/:id",async(req,res)=>{
         });
     }
 })
+
+
+//dgr mail send
+app.post("/dgr-send-form-data", async (req, res) => {
+  const { name, email, mobile, city } = req.body;
+
+  if (!name || !email || !mobile || !city) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  // Simple email validation
+  const emailRegex = /\S+@\S+\.\S+/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Invalid email address" });
+  }
+
+  // Nodemailer transporter
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "promotion.dgracademy@gmail.com",   // your email
+      pass: "hjpwuzwojnxqiqky",               // your Gmail app password
+    },
+  });
+
+  // Mail to Admin (your email)
+  const mailOptions = {
+    from: '"Dgr Academy" <promotion.dgracademy@gmail.com>',
+    to: "promotion.dgracademy@gmail.com",
+    subject: "📩 New Student Form Submission",
+    html: `
+      <h2>New Student Form Submitted</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> ${email}</p>
+      <p><strong>Mobile:</strong> ${mobile}</p>
+      <p><strong>City:</strong> ${city}</p>
+      <hr/>
+      <p>📍 This student submitted the form on your website.</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("📧 Student data sent to admin email successfully!");
+    res.json({ success: true, message: "Form submitted successfully!" });
+  } catch (err) {
+    console.error("❌ Failed to send email:", err);
+    res.status(500).json({ success: false, message: "Failed to send email" });
+  }
+});
+
 
 
 
