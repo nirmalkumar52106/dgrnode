@@ -14,6 +14,7 @@ const Testt = require('./schemas/testsubmit');
 const TestResult = require("./schemas/testsubmit");
 const Test = require("./schemas/testschema");
 const nodemailer = require('nodemailer');
+const StudentDgrLeads = require("./schemas/dgrleads");
 
 
  
@@ -1072,6 +1073,10 @@ app.delete("/allwebaddenq/:id",async(req,res)=>{
 //dgr mail send
 app.post("/dgr-send-form-data", async (req, res) => {
   const { name, email, mobile, city } = req.body;
+
+  const student = new StudentDgrLeads({ name, email, mobile, city });
+    await student.save();
+
 
   if (!name || !email || !mobile || !city) {
     return res.status(400).json({ message: "All fields are required" });
