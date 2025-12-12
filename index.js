@@ -102,6 +102,43 @@ app.get('/student-profile', async (req, res) => {
   }
 });
 
+app.delete("/deletestudent/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    // Check if student exists
+    const student = await Student.findOne({ studentId });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    // 1. Delete student
+    await Student.findOneAndDelete({ studentId });
+
+    // 2. Delete attendance records
+    await Attendence.deleteMany({ studentId });
+
+    // 3. Delete test submissions
+    await TestResult.deleteMany({ studentId });
+
+    res.status(200).json({
+      success: true,
+      message: "Student, attendance, and test submissions deleted successfully",
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete student",
+      error: error.message,
+    });
+  }
+});
+
+
 //student update password
 app.put("/student-update-password", async (req, res) => {
   const authHeader = req.headers.authorization;
@@ -244,21 +281,7 @@ app.put('/tests/:id', async (req, res) => {
 
 
 
-//submit test
-// app.post("/submit-test", async (req, res) => {
-//   const { studentId, testId, answers } = req.body;
-//   const test = await Test.findById(testId);
 
-//   let score = 0;
-//   test.questions.forEach((q, index) => {
-//     if (q.correctAnswer === answers[index]) score++;
-//   });
-
-//   const submission = new TestResult({ studentId, testId, answers, score });
-//   await submission.save();
-
-//   res.json({ success: true, score });
-// });
 
 
 app.post("/submit-test", async (req, res) => {
@@ -893,38 +916,7 @@ app.post("/addcourse" ,async(req,res)=>{
   }
 
 
-//     const course = new Course({
-//         cardimage : req.body.cardimage,
-//         coursecategory : req.body.coursecategory,
-//         courcedesc : req.body.courcedesc,
-//         courcecreatedby : req.body.courcecreatedby,
-//         courceprice : req.body.courceprice,
-//         instructor : req.body.instructor,
-//         createdby : req.body.createdby,
-//     })
-    
 
-//     const doc = await course.save()
-//     console.log(doc)
-//      console.log(req.body)
-//      res.json(req.body)
-//      try{
-//          if(course){
-//              res.status(200).json({
-//                  doc:doc,
-//                  status:true,
-//                  message:"New Course Added...!"
-//              })
-//          }
-//          else{
-//              res.status(404).json({
-//                  error:err,
-//                  message:"Something went wrong"
-//              });
-//          }
-//      }catch(err){ 
-//  console.log(err)
-//      }
 })
 
 app.get("/allcourse",async(req,res)=>{
@@ -938,7 +930,7 @@ app.patch("/allcourse/:id", async(req,res)=>{
     const doc = await Course.findByIdAndUpdate(id, req.body)     
     res.json(req.body);
 });
-
+ 
 app.delete("/allcourse/:id",async(req,res)=>{
     try{
         const id = req.params.id;
@@ -1071,57 +1063,57 @@ app.delete("/allwebaddenq/:id",async(req,res)=>{
 
 
 //dgr mail send
-app.post("/dgr-send-form-data", async (req, res) => {
-  const { name, email, mobile, city } = req.body;
+// app.post("/dgr-send-form-data", async (req, res) => {
+//   const { name, email, mobile, city } = req.body;
 
-  const student = new StudentDgrLeads({ name, email, mobile, city });
-    await student.save();
+//   const student = new StudentDgrLeads({ name, email, mobile, city });
+//     await student.save();
 
 
-  if (!name || !email || !mobile || !city) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
+//   if (!name || !email || !mobile || !city) {
+//     return res.status(400).json({ message: "All fields are required" });
+//   }
 
-  // Simple email validation
-  const emailRegex = /\S+@\S+\.\S+/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: "Invalid email address" });
-  }
+//   // Simple email validation
+//   const emailRegex = /\S+@\S+\.\S+/;
+//   if (!emailRegex.test(email)) {
+//     return res.status(400).json({ message: "Invalid email address" });
+//   }
 
-  // Nodemailer transporter
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: "promotion.dgracademy@gmail.com",   // your email
-      pass: "hjpwuzwojnxqiqky",               // your Gmail app password
-    },
-  });
+//   // Nodemailer transporter
+//   const transporter = nodemailer.createTransport({
+//     service: "gmail",
+//     auth: {
+//       user: "promotion.dgracademy@gmail.com",   // your email
+//       pass: "hjpwuzwojnxqiqky",               // your Gmail app password
+//     },
+//   });
 
-  // Mail to Admin (your email)
-  const mailOptions = {
-    from: '"Dgr Academy" <promotion.dgracademy@gmail.com>',
-    to: "promotion.dgracademy@gmail.com",
-    subject: "📩 New Student Form Submission",
-    html: `
-      <h2>New Student Form Submitted</h2>
-      <p><strong>Name:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Mobile:</strong> ${mobile}</p>
-      <p><strong>City:</strong> ${city}</p>
-      <hr/>
-      <p>📍 This student submitted the form on your website.</p>
-    `,
-  };
+//   // Mail to Admin (your email)
+//   const mailOptions = {
+//     from: '"Dgr Academy" <promotion.dgracademy@gmail.com>',
+//     to: "promotion.dgracademy@gmail.com",
+//     subject: "📩 New Student Form Submission",
+//     html: `
+//       <h2>New Student Form Submitted</h2>
+//       <p><strong>Name:</strong> ${name}</p>
+//       <p><strong>Email:</strong> ${email}</p>
+//       <p><strong>Mobile:</strong> ${mobile}</p>
+//       <p><strong>City:</strong> ${city}</p>
+//       <hr/>
+//       <p>📍 This student submitted the form on your website.</p>
+//     `,
+//   };
 
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log("📧 Student data sent to admin email successfully!");
-    res.json({ success: true, message: "Form submitted successfully!" });
-  } catch (err) {
-    console.error("❌ Failed to send email:", err);
-    res.status(500).json({ success: false, message: "Failed to send email" });
-  }
-});
+//   try {
+//     await transporter.sendMail(mailOptions);
+//     console.log("📧 Student data sent to admin email successfully!");
+//     res.json({ success: true, message: "Form submitted successfully!" });
+//   } catch (err) {
+//     console.error("❌ Failed to send email:", err);
+//     res.status(500).json({ success: false, message: "Failed to send email" });
+//   }
+// });
 
 
 
