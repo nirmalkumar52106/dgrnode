@@ -139,7 +139,7 @@ app.delete("/deletestudent/:studentId", async (req, res) => {
 });
 
 
-app.patch("editstudent/:studentId", async (req, res) => {
+app.patch("/editstudent/:studentId", async (req, res) => {
   try {
     const { studentId } = req.params;
     const { name, email, mobile, parentMobile, address } = req.body;
