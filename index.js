@@ -15,6 +15,9 @@ const TestResult = require("./schemas/testsubmit");
 const Test = require("./schemas/testschema");
 const nodemailer = require('nodemailer');
 const StudentDgrLeads = require("./schemas/dgrleads");
+const Staff = require("./schemas/staff");
+const StaffAttendence = require("./schemas/staffattendence");
+
 
 
  
@@ -1144,8 +1147,170 @@ app.delete("/allwebaddenq/:id",async(req,res)=>{
 // });
 
 
+/* ================= STAFF APIs ================= */
+
+// ➕ Add Staff
+app.post("/api/staff/add", async (req, res) => {
+  try {
+    const staff = await Staff.create(req.body);
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 📄 Get All Staff (Table first)
+app.get("/api/staff", async (req, res) => {
+  try {
+    const staff = await Staff.find().sort({ createdAt: -1 });
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✏️ Update Staff
+app.put("/api/staff/:id", async (req, res) => {
+  try {
+    const staff = await Staff.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ❌ Delete Staff
+app.delete("/api/staff/:id", async (req, res) => {
+  try {
+    await Staff.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
-app.listen(2000,()=>{
+
+/* ================= ATTENDANCE APIs ================= */
+
+// 🟢 Mark / Update Attendance
+/* ================= ATTENDANCE MARK ================= */
+
+const formatDate = (dateStr) => {
+  const d = new Date(dateStr);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
+// ===================== Attendance APIs =====================
+
+// Mark Attendance
+app.post("/api/attendance/mark", async (req, res) => {
+  try {
+    let { staffId, date, status } = req.body;
+    date = formatDate(date);        // "YYYY-MM-DD"
+    const month = date.slice(0, 7); // "YYYY-MM"
+
+    const attendance = await StaffAttendence.findOneAndUpdate(
+      { staffId, date },
+      { staffId, date, month, status },
+      { upsert: true, new: true }
+    );
+
+    res.json(attendance);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get Monthly Attendance
+app.get("/api/attendance/:staffId/:month", async (req, res) => {
+  try {
+    const staffId = req.params.staffId;
+    const month = req.params.month; // "YYYY-MM"
+
+    const records = await StaffAttendence.find({
+      staffId,
+      month
+    });
+
+    const map = {};
+    records.forEach(r => {
+      map[r.date] = r.status; // directly use date
+    });
+
+    const [year, mon] = month.split("-");
+    const daysInMonth = new Date(parseInt(year), parseInt(mon), 0).getDate();
+
+    const result = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+      const day = String(i).padStart(2, "0");
+      const date = `${month}-${day}`;
+      result.push({
+        date,
+        status: map[date] || "absent"
+      });
+    }
+
+    res.json(result);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ===================== Salary API =====================
+
+// Attendance Based Salary
+app.get("/api/salary/:staffId/:month", async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.params.staffId);
+    if (!staff) return res.status(404).json({ error: "Staff not found" });
+
+    const attendance = await StaffAttendence.find({
+      staffId: req.params.staffId,
+      month: req.params.month
+    });
+
+    let present = 0;
+    let half = 0;
+
+    attendance.forEach(a => {
+      if (a.status === "present") present++;
+      else if (a.status === "half") half++;
+    });
+
+    const [year, mon] = req.params.month.split("-");
+    const daysInMonth = new Date(parseInt(year), parseInt(mon), 0).getDate();
+    const absent = daysInMonth - (present + half);
+
+    const perDaySalary = staff.baseSalary / 30;
+    const totalSalary = (present * perDaySalary) + (half * (perDaySalary / 2));
+
+    res.json({
+      staffName: staff.name,
+      month: req.params.month,
+      presentDays: present,
+      halfDays: half,
+      absentDays: absent,
+      totalDays: daysInMonth,
+      totalSalary: Math.round(totalSalary)
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+
+app.listen(5000,()=>{
   console.log("App started...")
 })
