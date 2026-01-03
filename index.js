@@ -15,7 +15,7 @@ const TestResult = require("./schemas/testsubmit");
 const Test = require("./schemas/testschema");
 const nodemailer = require('nodemailer');
 const StudentDgrLeads = require("./schemas/dgrleads");
-const Staff = require("./schemas/staff");
+const Staff = require("./schemas/Staff");
 const StaffAttendence = require("./schemas/staffattendence");
 
 
