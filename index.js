@@ -150,36 +150,31 @@ app.patch("/editstudent/:studentId", async (req, res) => {
     const { studentId } = req.params;
     const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
 
-    // Check if student exists
     const student = await Student.findOne({ studentId });
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Update fields
     student.name = name || student.name;
     student.email = email || student.email;
     student.mobile = mobile || student.mobile;
     student.parentMobile = parentMobile || student.parentMobile;
     student.address = address || student.address;
 
-    // ✅ course update
-    if (courseName) {
-      student.course.name = courseName;
-    }
+    // ✅ ADD THIS
+    student.course = {
+      ...student.course,
+      name: courseName || student.course?.name,
+      status: courseStatus || student.course?.status
+    };
 
-    if (courseStatus) {
-      student.course.status = courseStatus;
-    }
-
-    // ✅ grade update
-    if (grade) {
-      student.grade = grade;
-    }
+    // ✅ ADD THIS
+    student.grade = grade || student.grade;
 
     await student.save();
 
     res.status(200).json({ message: "Student updated successfully", student });
+
   } catch (error) {
     console.error("Error updating student:", error);
     res.status(500).json({ message: "Server error" });
