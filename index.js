@@ -35,7 +35,7 @@ require("./schemas/mongodb")
 //student register
 app.post("/studentregister", async (req, res) => {
   try {
-    const { studentId, password, name, email, mobile , parentMobile, address } = req.body;
+    const { studentId, password, name, email, mobile, parentMobile, address, courseName } = req.body;
 
     const existing = await Student.findOne({ studentId });
     if (existing) {
@@ -51,7 +51,10 @@ app.post("/studentregister", async (req, res) => {
       email,
       mobile,
       parentMobile,
-      address
+      address,
+      course: {
+        name: courseName
+      }
     });
 
     await newStudent.save();
@@ -145,7 +148,7 @@ app.delete("/deletestudent/:studentId", async (req, res) => {
 app.patch("/editstudent/:studentId", async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { name, email, mobile, parentMobile, address } = req.body;
+    const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
 
     // Check if student exists
     const student = await Student.findOne({ studentId });
@@ -160,6 +163,20 @@ app.patch("/editstudent/:studentId", async (req, res) => {
     student.parentMobile = parentMobile || student.parentMobile;
     student.address = address || student.address;
 
+    // ✅ course update
+    if (courseName) {
+      student.course.name = courseName;
+    }
+
+    if (courseStatus) {
+      student.course.status = courseStatus;
+    }
+
+    // ✅ grade update
+    if (grade) {
+      student.grade = grade;
+    }
+
     await student.save();
 
     res.status(200).json({ message: "Student updated successfully", student });
@@ -168,7 +185,6 @@ app.patch("/editstudent/:studentId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 //student update password
 app.put("/student-update-password", async (req, res) => {

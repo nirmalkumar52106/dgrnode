@@ -11,4 +11,4 @@ const submissionSchema = new mongoose.Schema({
 
 const TestResult = mongoose.model('testresult', submissionSchema);
 
- module.exports = TestResult
+ module.exports = TestResult 

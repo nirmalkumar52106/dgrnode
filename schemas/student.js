@@ -1,35 +1,53 @@
-// models/Student.js
+
+
 const mongoose = require("mongoose");
 
 const studentSchema = new mongoose.Schema({
   studentId: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  name: String, 
+
+  name: String,
   email: String,
   mobile: String,
   address: String,
   parentMobile: String,
-  fees: {
-  total: Number,
-  paid: Number,
-  dueDate: Date,
-  emi: Boolean,
-  paymentHistory: [
-    {
-      amount: Number,
-      date: Date,
-      mode: String 
+
+
+  course: {
+    name: String, 
+    status: {
+      type: String,
+      enum: ["Ongoing", "Completed"],
+      default: "Ongoing"
     }
-  ]
-},
-  attendance: [ 
+  },
+
+  grade: {
+    type: String 
+  },
+
+  fees: {
+    total: Number,
+    paid: Number,
+    dueDate: Date,
+    emi: Boolean,
+    paymentHistory: [
+      {
+        amount: Number,
+        date: Date,
+        mode: String
+      }
+    ]
+  },
+
+  attendance: [
     {
       date: Date,
-      status: String, // "Present" or "Absent"
+      status: String
     }
   ]
 });
 
-const Student = mongoose.model('student', studentSchema);
+const Student = mongoose.model("student", studentSchema);
 
-  module.exports = Student
+module.exports = Student;
