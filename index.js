@@ -161,12 +161,10 @@ app.patch("/editstudent/:studentId", async (req, res) => {
     student.parentMobile = parentMobile || student.parentMobile;
     student.address = address || student.address;
 
-    // ✅ ADD THIS
     student.course = {
-      ...student.course,
-      name: courseName || student.course?.name,
-      status: courseStatus || student.course?.status
-    };
+  name: courseName ? courseName : (student.course?.name || ""),
+  status: courseStatus ? courseStatus : (student.course?.status || "")
+};
 
     // ✅ ADD THIS
     student.grade = grade || student.grade;
