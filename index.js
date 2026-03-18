@@ -145,7 +145,48 @@ app.delete("/deletestudent/:studentId", async (req, res) => {
 });
 
 
+app.patch("/editstudent/:studentId", async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
 
+    const student = await Student.findOne({ studentId });
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    student.name = name || student.name;
+    student.email = email || student.email;
+    student.mobile = mobile || student.mobile;
+    student.parentMobile = parentMobile || student.parentMobile;
+    student.address = address || student.address;
+
+    // 🔥 FIX
+    if (!student.course) {
+      student.course = {};
+    }
+
+    if (courseName !== undefined) {
+      student.course.name = courseName;
+    }
+
+    if (courseStatus !== undefined) {
+      student.course.status = courseStatus;
+    }
+
+    if (grade !== undefined) {
+      student.grade = grade;
+    }
+
+    await student.save();
+
+    res.status(200).json({ message: "Student updated successfully", student });
+
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 //student update password
 app.put("/student-update-password", async (req, res) => {
