@@ -1329,27 +1329,27 @@ app.get("/api/salary/:staffId/:month", verifyToken ,  async (req, res) => {
 
 
 //admin login api
-app.post("/adminnnnregister", async (req, res) => {
-  try {
-    const { username, email, password, mobile } = req.body;
+// app.post("/adminnnnregister", async (req, res) => {
+//   try {
+//     const { username, email, password, mobile } = req.body;
 
-    const hashPassword = await bcrypt.hash(password, 10);
+//     const hashPassword = await bcrypt.hash(password, 10);
 
-    const user = new AdminUsersss({
-      username,
-      email,
-      password: hashPassword,
-      mobile,
-      role: "admin" // first admin
-    });
+//     const user = new AdminUsersss({
+//       username,
+//       email,
+//       password: hashPassword,
+//       mobile,
+//       role: "admin" // first admin
+//     });
 
-    await user.save();
-    res.json({ msg: "Admin Created" });
+//     await user.save();
+//     res.json({ msg: "Admin Created" });
 
-  } catch (err) {
-    res.status(500).json(err);
-  }
-});
+//   } catch (err) {
+//     res.status(500).json(err);
+//   }
+// });
 
 //admin login
 app.post("/adminlogin", async (req, res) => {
