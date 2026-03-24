@@ -17,6 +17,8 @@ const nodemailer = require('nodemailer');
 const StudentDgrLeads = require("./schemas/dgrleads");
 const Staff = require("./schemas/Staff");
 const StaffAttendence = require("./schemas/staffattendence");
+const AdminUsersss = require("./schemas/adminusers");
+const { verifyToken } = require("./middlewares/verifyuser");
 
 
 
@@ -33,7 +35,7 @@ require("./schemas/mongodb")
 
 
 //student register
-app.post("/studentregister", async (req, res) => {
+app.post("/studentregister", verifyToken, async (req, res) => {
   try {
     const { studentId, password, name, email, mobile, parentMobile, address, courseName } = req.body;
 
@@ -108,7 +110,7 @@ app.get('/student-profile', async (req, res) => {
   }
 });
 
-app.delete("/deletestudent/:studentId", async (req, res) => {
+app.delete("/deletestudent/:studentId", verifyToken, async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -145,7 +147,7 @@ app.delete("/deletestudent/:studentId", async (req, res) => {
 });
 
 
-app.patch("/editstudent/:studentId", async (req, res) => {
+app.patch("/editstudent/:studentId", verifyToken, async (req, res) => {
   try {
     const { studentId } = req.params;
     const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
@@ -262,7 +264,7 @@ app.get("/student-attendance", verifyStudent, async (req, res) => {
 });
  
 // Admin uploads a new test
-app.post("/create-test", async (req, res) => {
+app.post("/create-test", verifyToken, async (req, res) => {
   try {
     const test = new Test(req.body);
     await test.save();
@@ -279,7 +281,7 @@ app.get("/tests", async (req, res) => {
 });
 
 //delete
-app.delete('/tests/:id', async (req, res) => {
+app.delete('/tests/:id', verifyToken, async (req, res) => {
   try {
     const deletedTest = await Test.findByIdAndDelete(req.params.id);
 
@@ -307,7 +309,7 @@ app.get('/tests/:id', async (req, res) => {
 });
 
 //edit test
-app.put('/tests/:id', async (req, res) => {
+app.put('/tests/:id', verifyToken, async (req, res) => {
   try {
     const { title, startDateTime } = req.body;
 
@@ -459,7 +461,7 @@ app.get("/test/student/:studentId", async (req, res) => {
 
 
 //all student 
-app.get("/allstudents", async (req, res) => {
+app.get("/allstudents", verifyToken, async (req, res) => {
   try {
     const students = await Student.find({});
     res.status(200).json({ success: true, students });
@@ -484,7 +486,7 @@ app.get('/get-student', async (req, res) => {
 
 
 //student attendence
-app.post('/markattendance', async (req, res) => {
+app.post('/markattendance', verifyToken, async (req, res) => {
   try {
     let { attendance } = req.body;
 
@@ -549,7 +551,7 @@ app.get('/attendance/:studentId', async (req, res) => {
 });
 
 //get attendence per day
-app.get('/studentswithtodayattendance', async (req, res) => {
+app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
   try {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
@@ -585,7 +587,7 @@ app.get('/studentswithtodayattendance', async (req, res) => {
 });
 
 //update attendence
-app.post('/updateattendance', async (req, res) => {
+app.post('/updateattendance', verifyToken, async (req, res) => {
   try {
     const { studentId, status } = req.body;
     if (!studentId || !status) return res.json({ success: false, message: 'Missing data' });
@@ -610,7 +612,7 @@ app.post('/updateattendance', async (req, res) => {
 });
 
 //get by date attendence
-app.get('/getattendance/:studentId', async (req, res) => {
+app.get('/getattendance/:studentId', verifyToken, async (req, res) => {
   try {
     const { studentId } = req.params;
     const attendanceRecords = await Attendence.find({ studentId }).sort({ date: 1 }); // oldest to newest
@@ -623,7 +625,7 @@ app.get('/getattendance/:studentId', async (req, res) => {
 
 
 //fees pay
-app.post('/update-fees', async (req, res) => {
+app.post('/update-fees', verifyToken, async (req, res) => {
   const { studentId, total, paid = 0, dueDate, emi } = req.body;
 
   try {
@@ -648,7 +650,7 @@ app.post('/update-fees', async (req, res) => {
 //pay fees
 // POST /payfees
 // Request body: { studentId, amount, mode }
-app.post('/payfees', async (req, res) => {
+app.post('/payfees', verifyToken, async (req, res) => {
   const { studentId, amount, mode } = req.body;
 
   if (!studentId || !amount || !mode) {
@@ -694,7 +696,7 @@ app.post('/payfees', async (req, res) => {
 
 
 //enquiryapis###################################################################
-app.post("/addenquiry",async(req,res)=>{
+app.post("/addenquiry", verifyToken, async(req,res)=>{
     let enquiry = new Enquiry()
     enquiry.namee = req.body.namee;
     enquiry.mobile = req.body.mobile;
@@ -732,14 +734,14 @@ console.log(err)
 
 
 //get
-app.get("/allenquiry", async (req,res)=>{
+app.get("/allenquiry" , verifyToken, async (req,res)=>{
     const user = await Enquiry.find();
     res.send(user);
 });
 
 //delete
 
-app.delete("/allenquiry/:id",async(req,res)=>{
+app.delete("/allenquiry/:id", verifyToken, async(req,res)=>{
     try{
         const id = req.params.id;
         const doc = await Enquiry.findByIdAndDelete(id)
@@ -760,14 +762,14 @@ app.delete("/allenquiry/:id",async(req,res)=>{
 })
 
 //get by id
-app.get("/allenquiry/:id", async(req,res)=>{
+app.get("/allenquiry/:id", verifyToken, async(req,res)=>{
     const id = req.params.id;
     const result = await Enquiry.findOne({_id:id});
     res.json({"user":result});
 });
 
 //enquiry update
-app.patch("/allenquiry/:id", async(req,res)=>{
+app.patch("/allenquiry/:id", verifyToken, async(req,res)=>{
     const id = req.params.id;
     const doc = await Enquiry.findByIdAndUpdate(id, req.body)     
     res.json(req.body);
@@ -775,7 +777,7 @@ app.patch("/allenquiry/:id", async(req,res)=>{
 
 
 //blog post####################################################################
-app.post("/addblog" ,async(req,res)=>{
+app.post("/addblog" , verifyToken, async(req,res)=>{
     const blog = new Blog({
         blogtitle : req.body.blogtitle,
         blogdesc : req.body.blogdesc,
@@ -839,7 +841,7 @@ app.get("/allblogs/:id", async(req,res)=>{
 });
 
 // delete blogs
-app.delete("/allblog/:id",async(req,res)=>{
+app.delete("/allblog/:id", verifyToken, async(req,res)=>{
     try{
         const id = req.params.id;
         const doc = await Blog.findByIdAndDelete(id)
@@ -859,7 +861,7 @@ app.delete("/allblog/:id",async(req,res)=>{
 })
 
 //update blogs
-app.patch("/allblog/:id", async(req,res)=>{
+app.patch("/allblog/:id", verifyToken, async(req,res)=>{
     const id = req.params.id;
     const doc = await Blog.findByIdAndUpdate(id, req.body)
     if(doc){
@@ -906,7 +908,7 @@ app.get("/getremovedata" , async(req,res)=>{
 
 
 //add courses##############################################################################
-app.post("/addcourse" ,async(req,res)=>{
+app.post("/addcourse" , verifyToken, async(req,res)=>{
     try {
     const { cardimage ,
          coursecategory , 
@@ -974,13 +976,13 @@ app.get("/allcourse",async(req,res)=>{
 })
 
 
-app.patch("/allcourse/:id", async(req,res)=>{
+app.patch("/allcourse/:id", verifyToken, async(req,res)=>{
     const id = req.params.id;
     const doc = await Course.findByIdAndUpdate(id, req.body)     
     res.json(req.body);
 });
  
-app.delete("/allcourse/:id",async(req,res)=>{
+app.delete("/allcourse/:id", verifyToken, async(req,res)=>{
     try{
         const id = req.params.id;
         const doc = await Course.findByIdAndDelete(id)      
@@ -1069,7 +1071,7 @@ console.log(err)
 });
 
 //notify enquiry
-app.put("/markenquiryread/:id", async (req, res) => {
+app.put("/markenquiryread/:id", verifyToken, async (req, res) => {
   try {
     const result = await WebEnq.findByIdAndUpdate(
       req.params.id,
@@ -1084,14 +1086,14 @@ app.put("/markenquiryread/:id", async (req, res) => {
 
 
 //get
-app.get("/allwebaddenq", async (req,res)=>{
+app.get("/allwebaddenq", verifyToken, async (req,res)=>{
     const webenqq = await WebEnq.find();
     res.send(webenqq);
 });
 
 //delete
 
-app.delete("/allwebaddenq/:id",async(req,res)=>{
+app.delete("/allwebaddenq/:id",verifyToken, async(req,res)=>{
     try{
         const id = req.params.id;
         const doc = await WebEnq.findByIdAndDelete(id)      
@@ -1168,7 +1170,7 @@ app.delete("/allwebaddenq/:id",async(req,res)=>{
 /* ================= STAFF APIs ================= */
 
 // ➕ Add Staff
-app.post("/api/staff/add", async (req, res) => {
+app.post("/api/staff/add", verifyToken, async (req, res) => {
   try {
     const staff = await Staff.create(req.body);
     res.json(staff);
@@ -1178,7 +1180,7 @@ app.post("/api/staff/add", async (req, res) => {
 });
 
 // 📄 Get All Staff (Table first)
-app.get("/api/staff", async (req, res) => {
+app.get("/api/staff", verifyToken, async (req, res) => {
   try {
     const staff = await Staff.find().sort({ createdAt: -1 });
     res.json(staff);
@@ -1188,7 +1190,7 @@ app.get("/api/staff", async (req, res) => {
 });
 
 // ✏️ Update Staff
-app.put("/api/staff/:id", async (req, res) => {
+app.put("/api/staff/:id", verifyToken, async (req, res) => {
   try {
     const staff = await Staff.findByIdAndUpdate(
       req.params.id,
@@ -1202,7 +1204,7 @@ app.put("/api/staff/:id", async (req, res) => {
 });
 
 // ❌ Delete Staff
-app.delete("/api/staff/:id", async (req, res) => {
+app.delete("/api/staff/:id", verifyToken, async (req, res) => {
   try {
     await Staff.findByIdAndDelete(req.params.id);
     res.json({ success: true });
@@ -1228,7 +1230,7 @@ const formatDate = (dateStr) => {
 // ===================== Attendance APIs =====================
 
 // Mark Attendance
-app.post("/api/attendance/mark", async (req, res) => {
+app.post("/api/attendance/mark", verifyToken, async (req, res) => {
   try {
     let { staffId, date, status } = req.body;
     date = formatDate(date);        // "YYYY-MM-DD"
@@ -1247,7 +1249,7 @@ app.post("/api/attendance/mark", async (req, res) => {
 });
 
 // Get Monthly Attendance
-app.get("/api/attendance/:staffId/:month", async (req, res) => {
+app.get("/api/attendance/:staffId/:month", verifyToken,  async (req, res) => {
   try {
     const staffId = req.params.staffId;
     const month = req.params.month; // "YYYY-MM"
@@ -1285,7 +1287,7 @@ app.get("/api/attendance/:staffId/:month", async (req, res) => {
 // ===================== Salary API =====================
 
 // Attendance Based Salary
-app.get("/api/salary/:staffId/:month", async (req, res) => {
+app.get("/api/salary/:staffId/:month", verifyToken ,  async (req, res) => {
   try {
     const staff = await Staff.findById(req.params.staffId);
     if (!staff) return res.status(404).json({ error: "Staff not found" });
@@ -1324,6 +1326,79 @@ app.get("/api/salary/:staffId/:month", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
+//admin login api
+app.post("/adminnnnregister", async (req, res) => {
+  try {
+    const { username, email, password, mobile } = req.body;
+
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    const user = new AdminUsersss({
+      username,
+      email,
+      password: hashPassword,
+      mobile,
+      role: "admin" // first admin
+    });
+
+    await user.save();
+    res.json({ msg: "Admin Created" });
+
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+//admin login
+app.post("/adminlogin", async (req, res) => {
+  const { email, password } = req.body;
+
+  const user = await AdminUsersss.findOne({ email });
+  if (!user) return res.status(400).json({ msg: "User not found" });
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) return res.status(400).json({ msg: "Wrong password" });
+
+  const token = jwt.sign(
+    { id: user._id, role: user.role, permissions: user.permissions },
+     "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn",
+    { expiresIn: "1d" }
+  );
+
+  res.json({ token, user });
+});
+
+///create subadmin
+app.post("/admin-create-subadmin", verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Access Denied" });
+    }
+
+    const { username, email, password, mobile, permissions } = req.body;
+
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    const user = new AdminUsersss({
+      username,
+      email,
+      password: hashPassword,
+      mobile,
+      role: "subadmin",
+      permissions
+    });
+
+    await user.save();
+    res.json({ msg: "Sub Admin Created" });
+
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
+
 
 
 
