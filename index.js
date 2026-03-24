@@ -1353,21 +1353,45 @@ app.post("/adminnnnregister", async (req, res) => {
 
 //admin login
 app.post("/adminlogin", async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { emailOrMobile, password } = req.body;
 
-  const user = await AdminUsersss.findOne({ email });
-  if (!user) return res.status(400).json({ msg: "User not found" });
+    // ✅ user find by email OR mobile
+    const user = await AdminUsersss.findOne({
+      $or: [{ email: emailOrMobile }, { mobile: emailOrMobile }]
+    });
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.status(400).json({ msg: "Wrong password" });
+    if (!user) {
+      return res.status(400).json({ msg: "User not found" });
+    }
 
-  const token = jwt.sign(
-    { id: user._id, role: user.role, permissions: user.permissions },
-     "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn",
-    { expiresIn: "1d" }
-  );
+    // ✅ password check
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ msg: "Wrong password" });
+    }
 
-  res.json({ token, user });
+    // ✅ JWT token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        permissions: user.permissions
+      },
+       "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn", // 🔥 use env
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      msg: "Login successful",
+      token,
+      user
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ msg: "Server error" });
+  }
 });
 
 ///create subadmin
