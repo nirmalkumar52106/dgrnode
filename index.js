@@ -1394,6 +1394,23 @@ app.post("/adminlogin", async (req, res) => {
   }
 }); 
 
+
+app.get("/admin-profile", verifyToken, async (req, res) => {
+  try {
+    // req.user.id comes from verifyToken middleware
+    const user = await AdminUsersss.findById(req.user.id).select("-password -__v");
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 ///create subadmin
 app.post("/admin-create-subadmin", verifyToken, async (req, res) => {
   try {
