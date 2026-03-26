@@ -12,6 +12,8 @@ const AdminuserSchema = new mongoose.Schema({
     default: "subadmin"
   },
 
+  isBlocked: { type: Boolean, default: false }, // 👈 ADD THIS
+
   permissions: {
     manageStudents: { type: Boolean, default: false },
     manageFees: { type: Boolean, default: false },
@@ -24,4 +26,4 @@ const AdminuserSchema = new mongoose.Schema({
 
 const AdminUsersss = mongoose.model('adminusers', AdminuserSchema);
 
-  module.exports = AdminUsersss
+module.exports = AdminUsersss

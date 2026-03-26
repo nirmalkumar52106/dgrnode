@@ -1392,7 +1392,7 @@ app.post("/adminlogin", async (req, res) => {
     console.log(err);
     res.status(500).json({ msg: "Server error" });
   }
-});
+}); 
 
 ///create subadmin
 app.post("/admin-create-subadmin", verifyToken, async (req, res) => {
@@ -1423,6 +1423,89 @@ app.post("/admin-create-subadmin", verifyToken, async (req, res) => {
 });
 
 
+app.get("/admin-subadmins", verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Access Denied" });
+    }
+
+    const users = await AdminUsersss.find({ role: "subadmin" });
+    res.json(users);
+
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+});
+
+
+app.put("/admin-update-subadmin/:id", verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Access Denied" });
+    }
+
+    const { permissions, mobile, username } = req.body;
+
+    const safePermissions = {
+      manageStudents: permissions?.manageStudents || false,
+      manageFees: permissions?.manageFees || false,
+      manageCourses: permissions?.manageCourses || false,
+      enquiry: permissions?.enquiry || false,
+      staff: permissions?.staff || false,
+      test: permissions?.test || false,
+    };
+
+    const updated = await AdminUsersss.findByIdAndUpdate(
+      req.params.id,
+      { username, mobile, permissions: safePermissions },
+      { new: true }
+    );
+
+    res.json({ msg: "Updated", updated });
+
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+});
+
+
+app.patch("/admin-toggle-block/:id", verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Access Denied" });
+    }
+
+    const user = await AdminUsersss.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+
+    res.json({ msg: user.isBlocked ? "User Blocked" : "User Unblocked" });
+
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+});
+
+
+app.delete("/admin-delete-subadmin/:id", verifyToken, async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ msg: "Access Denied" });
+    }
+
+    await AdminUsersss.findByIdAndDelete(req.params.id);
+
+    res.json({ msg: "Subadmin Deleted Permanently" });
+
+  } catch (err) {
+    res.status(500).json({ msg: "Server Error" });
+  }
+});
 
 
 
