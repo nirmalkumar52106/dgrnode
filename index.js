@@ -19,6 +19,7 @@ const Staff = require("./schemas/Staff");
 const StaffAttendence = require("./schemas/staffattendence");
 const AdminUsersss = require("./schemas/adminusers");
 const { verifyToken } = require("./middlewares/verifyuser");
+const Batch = require("./schemas/studentbatch");
 
 
 
@@ -1525,6 +1526,102 @@ app.delete("/admin-delete-subadmin/:id", verifyToken, async (req, res) => {
 });
 
 
+//student bacth
+const isValidTimeSlot = (start, end) => {
+  const startHour = parseInt(start.split(":")[0]);
+  const endHour = parseInt(end.split(":")[0]);
+
+  return (
+    startHour >= 9 &&
+    endHour <= 18 &&
+    endHour - startHour === 1
+  );
+};
+
+
+app.post("/api/batch/create", verifyToken, async (req, res) => {
+  try {
+    const { name, start, end, staffId } = req.body;
+
+    if (!isValidTimeSlot(start, end)) {
+      return res.status(400).json({ msg: "Invalid time slot" });
+    }
+
+    const batch = new Batch({
+      name,
+      timing: { start, end },
+      staffId
+    });
+
+    await batch.save();
+    res.json(batch);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/batch/add-student", verifyToken, async (req, res) => {
+  const { batchId, studentId } = req.body;
+
+  try {
+    const batch = await Batch.findById(batchId);
+
+    if (!batch.students.includes(studentId)) {
+      batch.students.push(studentId);
+      await batch.save();
+    }
+
+    res.json({ msg: "Student added" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.post("/api/batch/move-student", verifyToken, async (req, res) => {
+  const { fromBatchId, toBatchId, studentId } = req.body;
+
+  try {
+    await Batch.findByIdAndUpdate(fromBatchId, {
+      $pull: { students: studentId }
+    });
+
+    await Batch.findByIdAndUpdate(toBatchId, {
+      $addToSet: { students: studentId }
+    });
+
+    res.json({ msg: "Student moved" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/batch/:id", verifyToken, async (req, res) => {
+  try {
+    await Batch.findByIdAndDelete(req.params.id);
+
+    res.json({ msg: "Batch deleted only" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/batch/all", verifyToken, async (req, res) => {
+  try {
+    const batches = await Batch.find()
+      .populate("students")
+      .populate("staffId");
+
+    res.json(batches);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
