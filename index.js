@@ -1627,6 +1627,16 @@ app.get("/api/batch/all", verifyToken, async (req, res) => {
   }
 });
 
+app.post("/api/batch/remove-student", verifyToken, async (req, res) => {
+  const { batchId, studentId } = req.body;
+
+  await Batch.findByIdAndUpdate(batchId, {
+    $pull: { students: studentId }
+  });
+
+  res.json({ msg: "Student removed from batch" });
+});
+
 
 
 app.listen(5000,()=>{
