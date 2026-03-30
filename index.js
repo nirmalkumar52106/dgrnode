@@ -1637,6 +1637,18 @@ app.post("/api/batch/remove-student", verifyToken, async (req, res) => {
   res.json({ msg: "Student removed from batch" });
 });
 
+app.put("/api/batch/update/:id", async (req, res) => {
+  const { name, start, end, staffId } = req.body;
+
+  await Batch.findByIdAndUpdate(req.params.id, {
+    name,
+    timing: { start, end },
+    staffId
+  });
+
+  res.json({ msg: "Batch updated" });
+});
+
 
 
 app.listen(5000,()=>{
