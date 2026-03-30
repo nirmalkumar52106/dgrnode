@@ -30,7 +30,11 @@ const app = express()
 //external configuration
 app.use(bodyParser.json());
 app.use(express.json());
-app.use(cors(origin = "*"));
+app.use(cors({
+  origin: "*",  // sabko allow (dev ke liye)
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 require("./schemas/mongodb")
 
 
