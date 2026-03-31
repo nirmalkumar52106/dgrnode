@@ -22,6 +22,13 @@ const { verifyToken } = require("./middlewares/verifyuser");
 const Batch = require("./schemas/studentbatch");
 
 
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("UNHANDLED REJECTION:", err);
+});
 
  
 //main server
