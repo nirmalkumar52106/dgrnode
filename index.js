@@ -21,15 +21,6 @@ const AdminUsersss = require("./schemas/adminusers");
 const { verifyToken } = require("./middlewares/verifyuser");
 const Batch = require("./schemas/studentbatch");
 
-
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION:", err);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION:", err);
-});
-
  
 //main server
 const app = express()
@@ -38,9 +29,7 @@ const app = express()
 app.use(bodyParser.json());
 app.use(express.json());
 app.use(cors({
-  origin: "*",  // sabko allow (dev ke liye)
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true
+  origin: "*", 
 }));
 require("./schemas/mongodb")
 
