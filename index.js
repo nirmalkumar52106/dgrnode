@@ -1489,12 +1489,36 @@ app.post("/api/staff/login", async (req, res) => {
 
 app.get("/api/staff/batches", verifyStaff, async (req, res) => {
   try {
-    const batches = await Batch.find({ staffId: req.staff.id })
-      .populate("students", "name");
+    const batches = await Batch.find({ staffId: req.staff.id }).populate("students", "studentId name");
 
-    res.json(batches);
+    // Get today's date
+    const today = new Date().toISOString().split("T")[0];
+
+    // Fetch today's attendance for these students
+    const studentIds = batches.flatMap((b) => b.students.map((s) => s.studentId));
+    const attendanceRecords = await Attendence.find({
+      studentId: { $in: studentIds },
+      date: today,
+    });
+
+    // Map studentId => status
+    const attendanceMap = {};
+    attendanceRecords.forEach((a) => {
+      attendanceMap[a.studentId] = a.status;
+    });
+
+    // Attach todayStatus to each student
+    const batchesWithAttendance = batches.map((b) => ({
+      ...b.toObject(),
+      students: b.students.map((s) => ({
+        ...s.toObject(),
+        todayStatus: attendanceMap[s.studentId] || "Not Marked",
+      })),
+    }));
+
+    res.json({ success: true, batches: batchesWithAttendance });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
