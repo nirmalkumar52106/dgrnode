@@ -1351,6 +1351,45 @@ app.get("/api/salary/:staffId/:month", verifyToken ,  async (req, res) => {
 });
 
 
+app.post("/api/staff/login", async (req, res) => {
+  try {
+    const { mobile, password } = req.body;
+
+    const staff = await Staff.findOne({ mobile });
+
+    if (!staff) {
+      return res.status(400).json({ message: "Staff not found" });
+    }
+
+    const isMatch = await bcrypt.compare(password, staff.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid password" });
+    }
+
+    const token = jwt.sign(
+      { id: staff._id },
+      "staffjdbinfotechsecuredatatech",
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token,
+      staff: {
+        id: staff._id,
+        name: staff.name,
+        mobile: staff.mobile
+      }
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 //admin login api
 // app.post("/adminnnnregister", async (req, res) => {
 //   try {
