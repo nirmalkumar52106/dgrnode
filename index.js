@@ -1541,16 +1541,33 @@ const isValidTimeSlot = (start, end) => {
 
 app.post("/api/batch/create", verifyToken, async (req, res) => {
   try {
-    const { name, start, end, staffId } = req.body;
+    const { name, start, end, staffId, course, currentSubject, currentTopic } = req.body;
 
+    // ✅ Time validation
     if (!isValidTimeSlot(start, end)) {
       return res.status(400).json({ msg: "Invalid time slot" });
+    }
+
+    // ✅ Required validation
+    if (!course) {
+      return res.status(400).json({ msg: "Course is required" });
     }
 
     const batch = new Batch({
       name,
       timing: { start, end },
-      staffId
+      staffId,
+
+      // ✅ NEW fields
+      course,
+      currentSubject: currentSubject || "",
+      currentTopic: currentTopic || "",
+
+      // ✅ Optional: agar create time pe hi history dalni ho
+      topicHistory: currentSubject && currentTopic ? [{
+        subject: currentSubject,
+        topic: currentTopic
+      }] : []
     });
 
     await batch.save();
@@ -1634,16 +1651,51 @@ app.post("/api/batch/remove-student", verifyToken, async (req, res) => {
 });
 
 app.put("/api/batch/update/:id", async (req, res) => {
-  const { name, start, end, staffId } = req.body;
+  try {
+    const { 
+      name, 
+      start, 
+      end, 
+      staffId, 
+      course, 
+      currentSubject, 
+      currentTopic 
+    } = req.body;
 
-  await Batch.findByIdAndUpdate(req.params.id, {
-    name,
-    timing: { start, end },
-    staffId
-  });
+    const batch = await Batch.findById(req.params.id);
 
-  res.json({ msg: "Batch updated" });
+    if (!batch) {
+      return res.status(404).json({ msg: "Batch not found" });
+    }
+
+    // ✅ Basic fields update
+    if (name) batch.name = name;
+    if (start && end) batch.timing = { start, end };
+    if (staffId) batch.staffId = staffId;
+    if (course) batch.course = course;
+
+    // ✅ Subject & Topic update
+    if (currentSubject) batch.currentSubject = currentSubject;
+    if (currentTopic) batch.currentTopic = currentTopic;
+
+    // ✅ History save (only if both provided)
+    if (currentSubject && currentTopic) {
+      batch.topicHistory.push({
+        subject: currentSubject,
+        topic: currentTopic
+      });
+    }
+
+    await batch.save();
+
+    res.json({ msg: "Batch updated", batch });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
+
 
 
 
