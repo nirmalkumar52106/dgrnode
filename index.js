@@ -1355,24 +1355,56 @@ app.post("/api/staff/login", async (req, res) => {
   try {
     const { mobile, password } = req.body;
 
+    console.log("REQ BODY:", req.body); // 🔍 debug
+
+    // ✅ 1. Validation
+    if (!mobile || !password) {
+      return res.status(400).json({
+        message: "Mobile and password required"
+      });
+    }
+
+    // ✅ 2. Find Staff
     const staff = await Staff.findOne({ mobile });
 
     if (!staff) {
-      return res.status(400).json({ message: "Staff not found" });
+      return res.status(404).json({
+        message: "Staff not found"
+      });
     }
 
-    const isMatch = await bcrypt.compare(password, staff.password);
+    if (!staff.password) {
+      return res.status(500).json({
+        message: "Password not set for this staff"
+      });
+    }
+
+    // ✅ 3. Password Match (Handle BOTH cases 🔥)
+    let isMatch = false;
+
+    // 👉 Case 1: Hashed password
+    if (staff.password.startsWith("$2b$")) {
+      isMatch = await bcrypt.compare(password, staff.password);
+    } 
+    // 👉 Case 2: Old plain password (IMPORTANT FIX)
+    else {
+      isMatch = password === staff.password;
+    }
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid password" });
+      return res.status(400).json({
+        message: "Invalid password"
+      });
     }
 
+    // ✅ 4. Generate Token
     const token = jwt.sign(
-      { id: staff._id },
+      { id: staff._id, role: "staff" },
       "staffjdbinfotechsecuredatatech",
       { expiresIn: "1d" }
     );
 
+    // ✅ 5. Response (No password)
     res.json({
       token,
       staff: {
@@ -1383,7 +1415,10 @@ app.post("/api/staff/login", async (req, res) => {
     });
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log("LOGIN ERROR:", err); // 🔥 MUST
+    res.status(500).json({
+      error: err.message
+    });
   }
 });
 
