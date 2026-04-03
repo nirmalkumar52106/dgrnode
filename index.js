@@ -599,6 +599,44 @@ app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
   }
 });
 
+
+app.get('/studentswithtodayattendancestaff', verifyStaff, async (req, res) => {
+  try {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+
+    // Fetch all attendance records for today
+   const attendanceRecords = await Attendence.find({ date: today }).lean();
+
+    // Map studentId to attendance status
+    const attendanceMap = {};
+    attendanceRecords.forEach(record => {
+      attendanceMap[record.studentId] = record.status; // e.g. "Present" or "Absent"
+    });
+
+    // Fetch all students
+    const students = await Student.find({}).lean();
+
+
+    // Combine students with attendance info
+    const result = students.map(student => ({
+      studentId: student.studentId,
+      name: student.name,
+      email: student.email,
+      mobile: student.mobile,
+      parentEmail: student.parentEmail,
+      address: student.address,
+      attendance: attendanceMap[student.studentId] || 'Not Marked'
+    }));
+
+    res.json({ success: true, students: result });
+  } catch (error) {
+    console.error("Error fetching students with attendance:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+
 //update attendence
 app.post('/updateattendance', verifyToken, async (req, res) => {
   try {
@@ -623,6 +661,31 @@ app.post('/updateattendance', verifyToken, async (req, res) => {
     res.json({ success: false, message: 'Error updating attendance' });
   }
 });
+
+app.post('/updateattendancestaff', verifyStaff, async (req, res) => {
+  try {
+    const { studentId, status } = req.body;
+    if (!studentId || !status) return res.json({ success: false, message: 'Missing data' });
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    const existing = await Attendence.findOne({ studentId, date: today });
+
+    if (existing) {
+      existing.status = status;
+      await existing.save();
+    } else {
+      const newAttendance = new Attendence({ studentId, date: today, status });
+      await newAttendance.save();
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: 'Error updating attendance' });
+  }
+});
+
 
 //get by date attendence
 app.get('/getattendance/:studentId', verifyToken, async (req, res) => {
