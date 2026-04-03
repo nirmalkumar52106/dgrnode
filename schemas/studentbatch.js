@@ -4,7 +4,6 @@ const batchSchema = new mongoose.Schema({
   name: { 
     type: String, 
     required: true,
-    trim: true
   },
 
   timing: {
@@ -19,29 +18,29 @@ const batchSchema = new mongoose.Schema({
 
   students: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Student"
+    ref: "student"
   }],
 
-  // ✅ Main Course
+
   course: {
     type: String,
     required: true,
     trim: true
   },
 
-  // ✅ Subject (HTML, CSS, JS)
+ 
   currentSubject: {
     type: String,
     default: ""
   },
 
-  // ✅ Topic (Forms, Tables etc.)
+
   currentTopic: {
     type: String,
     default: ""
   },
 
-  // ✅ Full tracking history 🔥
+ 
   topicHistory: [
     {
       subject: String,
