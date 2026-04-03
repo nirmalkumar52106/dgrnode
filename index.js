@@ -20,6 +20,7 @@ const StaffAttendence = require("./schemas/staffattendence");
 const AdminUsersss = require("./schemas/adminusers");
 const { verifyToken } = require("./middlewares/verifyuser");
 const Batch = require("./schemas/studentbatch");
+const verifyStaff = require("./middlewares/verifystaff");
 
  
 //main server
@@ -1422,6 +1423,17 @@ app.post("/api/staff/login", async (req, res) => {
   }
 });
 
+
+app.get("/api/staff/batches", verifyStaff, async (req, res) => {
+  try {
+    const batches = await Batch.find({ staffId: req.staff.id })
+      .populate("students", "name");
+
+    res.json(batches);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
