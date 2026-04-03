@@ -9,3 +9,4 @@ const attendanceSchema = new mongoose.Schema({
 
 const StaffAttendence = mongoose.model("StaffAttendence", attendanceSchema);
 module.exports = StaffAttendence
+ 

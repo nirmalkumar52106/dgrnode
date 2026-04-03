@@ -469,7 +469,7 @@ app.get("/allstudents", verifyToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch students" });
   }
-});
+}); 
 
 app.get('/get-student', async (req, res) => {
   const { studentId } = req.query;
@@ -495,20 +495,21 @@ app.post('/markattendance', verifyToken, async (req, res) => {
       attendance = [attendance];
     }
 
-    for (const entry of attendance) {
-      const { studentId, date, status } = entry;
-
-      // Check existing attendance
-      const existing = await Attendence.findOne({ studentId, date });
-
-      if (existing) {
-        await Attendence.updateOne({ _id: existing._id }, { $set: { status } });
-      } else {
-        const newEntry = new Attendence({ studentId, date, status });
-        await newEntry.save();
+    const operations = attendance.map(entry => ({
+      updateOne: {
+        filter: { studentId: entry.studentId, date: entry.date },
+        update: { $set: { status: entry.status } },
+        upsert: true
       }
-    }
-    res.status(200).json({ success: true, message: 'Attendance processed & SMS sent (if Absent)' });
+    }));
+
+    await Attendence.bulkWrite(operations);
+
+    res.status(200).json({
+      success: true,
+      message: 'Attendance processed successfully 🚀'
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -518,25 +519,34 @@ app.post('/markattendance', verifyToken, async (req, res) => {
 
 //attendence summary
 app.get('/attendance-summary/:date', async (req, res) => {
-  const { date } = req.params;
-  const formattedDate = new Date(date).toISOString().split('T')[0]; // format date
-
   try {
-    const allAttendance = await Attendence.find({ date: formattedDate });
+    const date = req.params.date;
 
-    const total = allAttendance.length;
-    const present = allAttendance.filter(a => a.status === 'Present').length;
-    const absent = allAttendance.filter(a => a.status === 'Absent').length;
+    const result = await Attendence.aggregate([
+      { $match: { date } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          present: {
+            $sum: { $cond: [{ $eq: ["$status", "Present"] }, 1, 0] }
+          },
+          absent: {
+            $sum: { $cond: [{ $eq: ["$status", "Absent"] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+
+    const summary = result[0] || { total: 0, present: 0, absent: 0 };
 
     res.json({
       success: true,
-      date: formattedDate,
-      total,
-      present,
-      absent
+      date,
+      ...summary
     });
+
   } catch (err) {
-    console.error(err);
     res.status(500).json({ success: false, message: 'Error fetching summary' });
   }
 });
@@ -558,7 +568,7 @@ app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch all attendance records for today
-    const attendanceRecords = await Attendence.find({ date: today });
+   const attendanceRecords = await Attendence.find({ date: today }).lean();
 
     // Map studentId to attendance status
     const attendanceMap = {};
@@ -567,7 +577,8 @@ app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
     });
 
     // Fetch all students
-    const students = await Student.find({});
+    const students = await Student.find({}).lean();
+
 
     // Combine students with attendance info
     const result = students.map(student => ({
@@ -622,6 +633,17 @@ app.get('/getattendance/:studentId', verifyToken, async (req, res) => {
     console.error(err);
     res.json({ success: false, message: 'Error fetching attendance' });
   }
+});
+
+app.get('/attendance-percentage/:studentId',  async (req, res) => {
+  const { studentId } = req.params;
+
+  const total = await Attendence.countDocuments({ studentId });
+  const present = await Attendence.countDocuments({ studentId, status: "Present" });
+
+  const percentage = total ? ((present / total) * 100).toFixed(2) : 0;
+
+  res.json({ success: true, percentage });
 });
 
 
