@@ -563,7 +563,7 @@ app.get('/attendance/:studentId', async (req, res) => {
 });
 
 //get attendence per day
-app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
+app.get('/studentswithtodayattendance', verifyToken || verifyStaff, async (req, res) => {
   try {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
@@ -600,7 +600,7 @@ app.get('/studentswithtodayattendance', verifyToken, async (req, res) => {
 });
 
 
-app.get('/studentswithtodayattendancestaff', verifyStaff, async (req, res) => {
+app.get('/studentswithtodayattendancestaff', verifyToken || verifyStaff, async (req, res) => {
   try {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
@@ -638,7 +638,7 @@ app.get('/studentswithtodayattendancestaff', verifyStaff, async (req, res) => {
 
 
 //update attendence
-app.post('/updateattendance', verifyToken, async (req, res) => {
+app.post('/updateattendance', verifyToken || verifyStaff, async (req, res) => {
   try {
     const { studentId, status } = req.body;
     if (!studentId || !status) return res.json({ success: false, message: 'Missing data' });
@@ -662,7 +662,7 @@ app.post('/updateattendance', verifyToken, async (req, res) => {
   }
 });
 
-app.post('/updateattendancestaff', verifyStaff, async (req, res) => {
+app.post('/updateattendancestaff', verifyToken || verifyStaff, async (req, res) => {
   try {
     const { studentId, status } = req.body;
     if (!studentId || !status) return res.json({ success: false, message: 'Missing data' });
@@ -688,7 +688,7 @@ app.post('/updateattendancestaff', verifyStaff, async (req, res) => {
 
 
 //get by date attendence
-app.get('/getattendance/:studentId', verifyToken, async (req, res) => {
+app.get('/getattendance/:studentId', verifyToken || verifyStaff, async (req, res) => {
   try {
     const { studentId } = req.params;
     const attendanceRecords = await Attendence.find({ studentId }).sort({ date: 1 }); // oldest to newest
@@ -1734,7 +1734,7 @@ const isValidTimeSlot = (start, end) => {
 };
 
 
-app.post("/api/batch/create", verifyToken, async (req, res) => {
+app.post("/api/batch/create", verifyToken || verifyStaff, async (req, res) => {
   try {
     const { name, start, end, staffId, course, currentSubject, currentTopic } = req.body;
 
@@ -1773,7 +1773,7 @@ app.post("/api/batch/create", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/api/batch/add-student", verifyToken, async (req, res) => {
+app.post("/api/batch/add-student", verifyToken || verifyStaff, async (req, res) => {
   const { batchId, studentId } = req.body;
 
   try {
@@ -1792,7 +1792,7 @@ app.post("/api/batch/add-student", verifyToken, async (req, res) => {
 });
 
 
-app.post("/api/batch/move-student", verifyToken, async (req, res) => {
+app.post("/api/batch/move-student", verifyToken || verifyStaff, async (req, res) => {
   const { fromBatchId, toBatchId, studentId } = req.body;
 
   try {
@@ -1811,7 +1811,7 @@ app.post("/api/batch/move-student", verifyToken, async (req, res) => {
   }
 });
 
-app.delete("/api/batch/:id", verifyToken, async (req, res) => {
+app.delete("/api/batch/:id", verifyToken || verifyStaff, async (req, res) => {
   try {
     await Batch.findByIdAndDelete(req.params.id);
 
@@ -1822,7 +1822,7 @@ app.delete("/api/batch/:id", verifyToken, async (req, res) => {
   }
 });
 
-app.get("/api/batch/all", verifyToken, async (req, res) => {
+app.get("/api/batch/all", verifyToken || verifyStaff, async (req, res) => {
   try {
     const batches = await Batch.find()
       .populate("students")
@@ -1835,7 +1835,7 @@ app.get("/api/batch/all", verifyToken, async (req, res) => {
   }
 });
 
-app.post("/api/batch/remove-student", verifyToken, async (req, res) => {
+app.post("/api/batch/remove-student", verifyToken || verifyStaff, async (req, res) => {
   const { batchId, studentId } = req.body;
 
   await Batch.findByIdAndUpdate(batchId, {
