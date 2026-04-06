@@ -12,7 +12,7 @@ const staffSchema = new mongoose.Schema(
     mobile: {
       type: String,
       required: true,
-      unique: true
+      unique: true 
     },
 
     email: {
@@ -37,7 +37,7 @@ const staffSchema = new mongoose.Schema(
       type: String,
       enum: ["Excellent", "Good", "Average", "Poor"],
       default: "Average"
-    },
+    }, 
 
     baseSalary: {
       type: Number,

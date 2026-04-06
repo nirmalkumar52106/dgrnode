@@ -1277,6 +1277,20 @@ app.get("/api/staff", verifyAdminOrStaff, async (req, res) => {
   }
 });
 
+app.get("/api/staff/profile", authMiddleware, async (req, res) => {
+  try {
+    const staff = await Staff.findById(req.user.id);
+
+    if (!staff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+
+    res.json(staff);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ✏️ Update Staff
 app.put("/api/staff/:id", verifyAdminOrStaff, async (req, res) => {
   try {
