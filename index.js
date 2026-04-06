@@ -1277,7 +1277,7 @@ app.get("/api/staff", verifyAdminOrStaff, async (req, res) => {
   }
 });
 
-app.get("/api/staff/profile", authMiddleware, async (req, res) => {
+app.get("/api/staff/profile", verifyAdminOrStaff, async (req, res) => {
   try {
     const staff = await Staff.findById(req.user.id);
 
