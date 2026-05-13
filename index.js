@@ -22,6 +22,7 @@ const AdminUsersss = require("./schemas/adminusers");
 const Batch = require("./schemas/studentbatch");
 const verifyStaff = require("./middlewares/verifystaff");
 const verifyAdminOrStaff = require("./middlewares/bothverify");
+const Notes = require("./schemas/notes");
 
  
 //main server
@@ -955,7 +956,6 @@ app.patch("/allblog/:id", verifyAdminOrStaff, async(req,res)=>{
     if(doc){
         res.json(req.body);
     }      
-    
 });
 
 
@@ -1902,6 +1902,304 @@ app.put("/api/batch/update/:id", async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// notes api
+
+const createSlug = (text) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-zA-Z0-9 ]/g, "")
+    .replace(/\s+/g, "-");
+};
+
+
+
+/* =====================================================
+   ADD NOTE
+===================================================== */
+
+app.post("/api/notes/add", async (req, res) => {
+  try {
+    const {
+      title,
+      category,
+      shortDescription,
+      content,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      featuredImage,
+    } = req.body;
+
+    const slug = createSlug(title);
+
+    const existingSlug = await Notes.findOne({ slug });
+
+    if (existingSlug) {
+      return res.status(400).json({
+        success: false,
+        message: "Slug Already Exists",
+      });
+    }
+
+    const newNote = new Notes({
+      title,
+      slug,
+      category,
+      shortDescription,
+      content,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      featuredImage,
+    });
+
+    await newNote.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Note Added Successfully",
+      data: newNote,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   GET ALL NOTES
+===================================================== */
+
+app.get("/api/notes", async (req, res) => {
+  try {
+    const notes = await Notes.find().sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json({
+      success: true,
+      total: notes.length,
+      data: notes,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   GET NOTE BY ID
+===================================================== */
+
+app.get("/api/notes/id/:id", async (req, res) => {
+  try {
+    const note = await Notes.findById(req.params.id);
+
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        message: "Note Not Found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: note,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   GET NOTE BY SLUG
+===================================================== */
+
+app.get("/api/notes/slug/:slug", async (req, res) => {
+  try {
+    const note = await Notes.findOne({
+      slug: req.params.slug,
+    });
+
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        message: "Note Not Found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: note,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   UPDATE NOTE
+===================================================== */
+
+app.patch("/api/notes/update/:id", async (req, res) => {
+  try {
+    const {
+      title,
+      category,
+      shortDescription,
+      content,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+      featuredImage,
+    } = req.body;
+
+    const slug = createSlug(title);
+
+    const updatedNote = await Notes.findByIdAndUpdate(
+      req.params.id,
+      {
+        title,
+        slug,
+        category,
+        shortDescription,
+        content,
+        metaTitle,
+        metaDescription,
+        metaKeywords,
+        featuredImage,
+      },
+      {
+        new: true,
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Note Updated Successfully",
+      data: updatedNote,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   DELETE NOTE
+===================================================== */
+
+app.delete("/api/notes/delete/:id", async (req, res) => {
+  try {
+    await Notes.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Note Deleted Successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   SEARCH NOTES
+===================================================== */
+
+app.get("/api/search/:keyword", async (req, res) => {
+  try {
+    const keyword = req.params.keyword;
+
+    const notes = await Notes.find({
+      $or: [
+        {
+          title: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+
+        {
+          category: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+
+        {
+          metaKeywords: {
+            $regex: keyword,
+            $options: "i",
+          },
+        },
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      total: notes.length,
+      data: notes,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+
+
+/* =====================================================
+   RELATED NOTES
+===================================================== */
+
+app.get("/api/related/:category", async (req, res) => {
+  try {
+    const notes = await Notes.find({
+      category: req.params.category,
+    }).limit(10);
+
+    res.status(200).json({
+      success: true,
+      data: notes,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 });
 
