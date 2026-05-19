@@ -10,7 +10,7 @@ const verifyAdminOrStaff = (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // 🔹 Try Admin/User Token
+    // 🔹 Try Admin/User Token 
     try {
       const decodedUser = jwt.verify(
         token,

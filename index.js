@@ -30,7 +30,8 @@ const app = express()
 
 //external configuration
 app.use(bodyParser.json());
-app.use(express.json());
+app.use(express.json({ limit: "1000mb" }));
+app.use(express.urlencoded({ limit: "1000mb", extended: true }));
 app.use(cors({
   origin: "*", 
 }));
@@ -90,7 +91,7 @@ app.post("/student-login", async (req, res) => {
     const token = jwt.sign(
       { id: student._id },
       "jdbinfotech", 
-      { expiresIn: "1d" }
+      { expiresIn: "7d" }
     );
 
     res.json({ success: true, token });
@@ -1590,7 +1591,7 @@ app.post("/adminlogin", async (req, res) => {
         permissions: user.permissions
       },
        "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn", // 🔥 use env
-      { expiresIn: "1d" }
+      { expiresIn: "7d" }
     );
 
     res.json({
