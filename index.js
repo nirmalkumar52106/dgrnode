@@ -23,6 +23,7 @@ const Batch = require("./schemas/studentbatch");
 const verifyStaff = require("./middlewares/verifystaff");
 const verifyAdminOrStaff = require("./middlewares/bothverify");
 const Notes = require("./schemas/notes");
+const Certificatee = require("./schemas/certificate");
 
  
 //main server
@@ -2204,7 +2205,251 @@ app.get("/api/related/:category", async (req, res) => {
   }
 });
 
+app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
 
+  try {
+
+    const {
+      studentName,
+      certificateId,
+      courseName,
+      startDate,
+      endDate,
+      verifiedDate,
+    } = req.body;
+
+    // CHECK DUPLICATE ID
+
+    const existingCertificate = await Certificatee.findOne({
+      certificateId,
+    });
+
+    if (existingCertificate) {
+      return res.status(400).json({
+        success: false,
+        message: "Certificate ID Already Exists",
+      });
+    }
+
+    const certificate = new Certificate({
+      studentName,
+      certificateId,
+      courseName,
+      startDate,
+      endDate,
+      verifiedDate,
+    });
+
+    await certificate.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Certificate Added Successfully",
+      certificate,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
+
+
+
+/*
+========================================
+GET ALL CERTIFICATES
+========================================
+*/
+
+app.get("/certificate/all", verifyAdminOrStaff , async (req, res) => {
+
+  try {
+
+    const certificates = await Certificatee.find()
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      total: certificates.length,
+      certificates,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
+
+
+
+/*
+========================================
+GET SINGLE CERTIFICATE
+========================================
+*/
+
+app.get("/certificate/:id",  async (req, res) => {
+
+  try {
+
+    const certificate = await Certificatee.findById(req.params.id);
+
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate Not Found",
+      });
+    }
+
+    res.json({
+      success: true,
+      certificate,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
+
+
+
+/*
+========================================
+UPDATE CERTIFICATE
+========================================
+*/
+
+app.patch("/certificate/update/:id",verifyAdminOrStaff , async (req, res) => {
+
+  try {
+
+    const certificate = await Certificatee.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+      }
+    );
+
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate Not Found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Certificate Updated Successfully",
+      certificate,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
+
+
+
+/*
+========================================
+DELETE CERTIFICATE
+========================================
+*/
+
+app.delete("/certificate/delete/:id", verifyAdminOrStaff , async (req, res) => {
+
+  try {
+
+    const certificate = await Certificatee.findByIdAndDelete(
+      req.params.id
+    );
+
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: "Certificate Not Found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Certificate Deleted Successfully",
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
+
+
+
+/*
+========================================
+VERIFY CERTIFICATE
+========================================
+*/
+
+app.get("/certificate/verify/:certificateId", async (req, res) => {
+
+  try {
+
+    const certificate = await Certificatee.findOne({
+      certificateId: req.params.certificateId,
+    });
+
+    if (!certificate) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid Certificate",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Valid Certificate",
+      certificate,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+
+  }
+
+});
 
 
 
