@@ -2231,7 +2231,7 @@ app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
       });
     }
 
-    const certificate = new Certificate({
+    const certificate = new Certificatee({
       studentName,
       certificateId,
       courseName,
