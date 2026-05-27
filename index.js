@@ -1078,7 +1078,7 @@ app.post("/addcourse" , verifyAdminOrStaff, async(req,res)=>{
 })
 
 app.get("/allcourse",async(req,res)=>{
-    const courses = await Course.find()
+    const courses = await Course.find({)
     res.send(courses)
 })
 
