@@ -34,7 +34,8 @@ const app = express()
 app.use(cors({
   origin: [
     "https://manage.jdbinfotech.co.in",
-    "*"
+    "*",
+   "https://jdbinfotech.co.in/
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
