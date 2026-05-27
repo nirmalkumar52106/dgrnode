@@ -31,29 +31,10 @@ const app = express()
 
 //external configuration
 
-app.use(cors({
-  origin: [
-    "https://manage.jdbinfotech.co.in",
-    "*",
-   "https://jdbinfotech.co.in/
-  ],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  credentials: true,
-}));
-
-app.options("*", cors());
-
-
 app.use(bodyParser.json());
-
-app.use(express.json({
-  limit: "10mb",
-}));
-
-app.use(express.urlencoded({
-  extended: true,
-  limit: "10mb",
-}));
+app.use(express.json({ limit: "1000mb" }));
+app.use(express.urlencoded({ limit: "1000mb", extended: true })); 
+app.use(cors({ origin: "*", }));
 require("./schemas/mongodb")
 
 
