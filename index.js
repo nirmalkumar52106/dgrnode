@@ -32,8 +32,16 @@ const app = express()
 //external configuration
 
 app.use(cors({
-  origin: "*",
+  origin: [
+    "https://manage.jdbinfotech.co.in",
+    "*"
+  ],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  credentials: true,
 }));
+
+app.options("*", cors());
+
 
 app.use(bodyParser.json());
 
