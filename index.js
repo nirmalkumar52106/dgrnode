@@ -30,11 +30,20 @@ const Certificatee = require("./schemas/certificate");
 const app = express()
 
 //external configuration
-app.use(bodyParser.json());
-app.use(express.json({ limit: "1000mb" }));
-app.use(express.urlencoded({ limit: "1000mb", extended: true }));
+
 app.use(cors({
-  origin: "*", 
+  origin: "*",
+}));
+
+app.use(bodyParser.json());
+
+app.use(express.json({
+  limit: "10mb",
+}));
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: "10mb",
 }));
 require("./schemas/mongodb")
 
