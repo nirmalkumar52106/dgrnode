@@ -1083,12 +1083,131 @@ app.get("/allcourse",async(req,res)=>{
 })
 
 
-app.patch("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
-    const id = req.params.id;
-    const doc = await Course.findByIdAndUpdate(id, req.body)     
-    res.json(req.body);
+// app.patch("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
+//     const id = req.params.id;
+//     const doc = await Course.findByIdAndUpdate(id, req.body)     
+//     res.json(req.body);
+// });
+
+
+app.patch(
+  "/allcourse/:id",
+  verifyAdminOrStaff,
+  async (req, res) => {
+
+    try {
+
+      const id = req.params.id;
+
+      const {
+        cardimage,
+        coursecategory,
+        courcedesc,
+        courcecreatedby,
+        courceprice,
+        instructor,
+        curriculum,
+        courseoverview,
+        whatyoulearn,
+        slug,
+        title,
+        metatitle,
+        metadescription,
+        metakeyword,
+        coursestatus
+      } = req.body;
+
+      // OLD COURSE
+      const oldCourse = await Course.findById(id);
+
+      if (!oldCourse) {
+        return res.status(404).json({
+          message: "Course not found"
+        });
+      }
+
+      // DELETE OLD CURRICULUM
+      await Curriculum.deleteMany({
+        _id: {
+          $in: oldCourse.curriculum
+        }
+      });
+
+      // CREATE NEW CURRICULUM
+      const curriculumIds = [];
+
+      for (const item of curriculum) {
+
+        const newCurriculum =
+          new Curriculum(item);
+
+        await newCurriculum.save();
+
+        curriculumIds.push(
+          newCurriculum._id
+        );
+      }
+
+      // UPDATE INSTRUCTOR
+      let instructorId =
+        oldCourse.instructor;
+
+      if (instructor) {
+
+        const updatedInstructor =
+          await Instructor.findByIdAndUpdate(
+            oldCourse.instructor,
+            instructor,
+            { new: true }
+          );
+
+        instructorId =
+          updatedInstructor._id;
+      }
+
+      // UPDATE COURSE
+      const updatedCourse =
+        await Course.findByIdAndUpdate(
+          id,
+          {
+            cardimage,
+            coursecategory,
+            courcedesc,
+            courcecreatedby,
+            courceprice,
+            courseoverview,
+            whatyoulearn,
+            slug,
+            title,
+            metatitle,
+            metadescription,
+            metakeyword,
+            coursestatus,
+            instructor: instructorId,
+            curriculum: curriculumIds,
+          },
+          {
+            new: true,
+          }
+        );
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Course updated successfully",
+        updatedCourse,
+      });
+
+    } catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
 });
- 
 app.delete("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
     try{
         const id = req.params.id;
