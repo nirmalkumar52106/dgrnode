@@ -31,20 +31,10 @@ const app = express()
 
 //external configuration
 
-app.use(cors({
-  origin: "*",
-}));
-
 app.use(bodyParser.json());
-
-app.use(express.json({
-  limit: "10mb",
-}));
-
-app.use(express.urlencoded({
-  extended: true,
-  limit: "10mb",
-}));
+app.use(express.json({ limit: "1000mb" }));
+app.use(express.urlencoded({ limit: "1000mb", extended: true })); 
+app.use(cors({ origin: "*", }));
 require("./schemas/mongodb")
 
 
@@ -1081,14 +1071,142 @@ app.get("/allcourse",async(req,res)=>{
 //     res.json(req.body);
 // });
 
+
+// app.patch(
+//   "/allcourse/:id",
+//   verifyAdminOrStaff,
+//   async (req, res) => {
+
+//     try {
+
+//       const id = req.params.id;
+
+//       const {
+//         cardimage,
+//         coursecategory,
+//         courcedesc,
+//         courcecreatedby,
+//         courceprice,
+//         instructor,
+//         curriculum,
+//         courseoverview,
+//         whatyoulearn,
+//         slug,
+//         title,
+//         metatitle,
+//         metadescription,
+//         metakeyword,
+//         coursestatus
+//       } = req.body;
+
+//       // OLD COURSE
+//       const oldCourse = await Course.findById(id);
+
+//       if (!oldCourse) {
+//         return res.status(404).json({
+//           message: "Course not found"
+//         });
+//       }
+
+//       // DELETE OLD CURRICULUM
+//       await Curriculum.deleteMany({
+//         _id: {
+//           $in: oldCourse.curriculum
+//         }
+//       });
+
+//       // CREATE NEW CURRICULUM
+//       const curriculumIds = [];
+
+//       for (const item of curriculum) {
+
+//         const newCurriculum =
+//           new Curriculum(item);
+
+//         await newCurriculum.save();
+
+//         curriculumIds.push(
+//           newCurriculum._id
+//         );
+//       }
+
+//       // UPDATE INSTRUCTOR
+//       let instructorId =
+//         oldCourse.instructor;
+
+//       if (instructor) {
+
+//         const updatedInstructor =
+//           await Instructor.findByIdAndUpdate(
+//             oldCourse.instructor,
+//             instructor,
+//             { new: true }
+//           );
+
+//         instructorId =
+//           updatedInstructor._id;
+//       }
+
+//       // UPDATE COURSE
+//       const updatedCourse =
+//         await Course.findByIdAndUpdate(
+//           id,
+//           {
+//             cardimage,
+//             coursecategory,
+//             courcedesc,
+//             courcecreatedby,
+//             courceprice,
+//             courseoverview,
+//             whatyoulearn,
+//             slug,
+//             title,
+//             metatitle,
+//             metadescription,
+//             metakeyword,
+//             coursestatus,
+//             instructor: instructorId,
+//             curriculum: curriculumIds,
+//           },
+//           {
+//             new: true,
+//           }
+//         );
+
+//       res.status(200).json({
+//         success: true,
+//         message:
+//           "Course updated successfully",
+//         updatedCourse,
+//       });
+
+//     } catch (error) {
+
+//       console.log(error);
+
+//       res.status(500).json({
+//         success: false,
+//         message: error.message,
+//       });
+//     }
+// });
+
+
 app.patch(
   "/allcourse/:id",
   verifyAdminOrStaff,
   async (req, res) => {
-
     try {
-
       const id = req.params.id;
+
+      const oldCourse = await Course.findById(id);
+
+      if (!oldCourse) {
+        return res.status(404).json({
+          success: false,
+          message: "Course not found",
+        });
+      }
 
       const {
         cardimage,
@@ -1105,101 +1223,170 @@ app.patch(
         metatitle,
         metadescription,
         metakeyword,
-        coursestatus
+        coursestatus,
       } = req.body;
 
-      // OLD COURSE
-      const oldCourse = await Course.findById(id);
+      /* ==========================
+         INSTRUCTOR UPDATE
+      ========================== */
 
-      if (!oldCourse) {
-        return res.status(404).json({
-          message: "Course not found"
-        });
-      }
+      let instructorId = oldCourse.instructor;
 
-      // DELETE OLD CURRICULUM
-      await Curriculum.deleteMany({
-        _id: {
-          $in: oldCourse.curriculum
-        }
-      });
-
-      // CREATE NEW CURRICULUM
-      const curriculumIds = [];
-
-      for (const item of curriculum) {
-
-        const newCurriculum =
-          new Curriculum(item);
-
-        await newCurriculum.save();
-
-        curriculumIds.push(
-          newCurriculum._id
-        );
-      }
-
-      // UPDATE INSTRUCTOR
-      let instructorId =
-        oldCourse.instructor;
-
-      if (instructor) {
-
+      if (
+        instructor &&
+        typeof instructor === "object" &&
+        Object.keys(instructor).length > 0
+      ) {
         const updatedInstructor =
           await Instructor.findByIdAndUpdate(
             oldCourse.instructor,
-            instructor,
-            { new: true }
+            {
+              $set: instructor,
+            },
+            {
+              new: true,
+            }
           );
 
-        instructorId =
-          updatedInstructor._id;
+        if (updatedInstructor) {
+          instructorId = updatedInstructor._id;
+        }
       }
 
-      // UPDATE COURSE
+      /* ==========================
+         CURRICULUM UPDATE
+      ========================== */
+
+      let curriculumIds = oldCourse.curriculum;
+
+      if (
+        curriculum &&
+        Array.isArray(curriculum)
+      ) {
+        // delete old curriculum documents
+        await Curriculum.deleteMany({
+          _id: {
+            $in: oldCourse.curriculum,
+          },
+        });
+
+        curriculumIds = [];
+
+        for (const item of curriculum) {
+          const newCurriculum =
+            await Curriculum.create({
+              title: item.title || "",
+              description:
+                item.description || "",
+              videoUrl:
+                item.videoUrl || "",
+            });
+
+          curriculumIds.push(
+            newCurriculum._id
+          );
+        }
+      }
+
+      /* ==========================
+         BUILD UPDATE OBJECT
+      ========================== */
+
+      const updateData = {};
+
+      if (cardimage !== undefined)
+        updateData.cardimage =
+          cardimage;
+
+      if (coursecategory !== undefined)
+        updateData.coursecategory =
+          coursecategory;
+
+      if (courcedesc !== undefined)
+        updateData.courcedesc =
+          courcedesc;
+
+      if (courcecreatedby !== undefined)
+        updateData.courcecreatedby =
+          courcecreatedby;
+
+      if (courceprice !== undefined)
+        updateData.courceprice =
+          courceprice;
+
+      if (courseoverview !== undefined)
+        updateData.courseoverview =
+          courseoverview;
+
+      if (whatyoulearn !== undefined)
+        updateData.whatyoulearn =
+          whatyoulearn;
+
+      if (slug !== undefined)
+        updateData.slug = slug;
+
+      if (title !== undefined)
+        updateData.title = title;
+
+      if (metatitle !== undefined)
+        updateData.metatitle =
+          metatitle;
+
+      if (metadescription !== undefined)
+        updateData.metadescription =
+          metadescription;
+
+      if (metakeyword !== undefined)
+        updateData.metakeyword =
+          metakeyword;
+
+      if (coursestatus !== undefined)
+        updateData.coursestatus =
+          coursestatus;
+
+      updateData.instructor =
+        instructorId;
+
+      updateData.curriculum =
+        curriculumIds;
+
+      /* ==========================
+         UPDATE COURSE
+      ========================== */
+
       const updatedCourse =
         await Course.findByIdAndUpdate(
           id,
           {
-            cardimage,
-            coursecategory,
-            courcedesc,
-            courcecreatedby,
-            courceprice,
-            courseoverview,
-            whatyoulearn,
-            slug,
-            title,
-            metatitle,
-            metadescription,
-            metakeyword,
-            coursestatus,
-            instructor: instructorId,
-            curriculum: curriculumIds,
+            $set: updateData,
           },
           {
             new: true,
           }
-        );
+        )
+          .populate("instructor")
+          .populate("curriculum");
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message:
           "Course updated successfully",
         updatedCourse,
       });
-
     } catch (error) {
+      console.error(
+        "Course Update Error:",
+        error
+      );
 
-      console.log(error);
-
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: error.message,
       });
     }
-});
- 
+  }
+);
+
 app.delete("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
     try{
         const id = req.params.id;
@@ -2333,251 +2520,6 @@ app.get("/api/related/:category", async (req, res) => {
   }
 });
 
-// app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
-
-//   try {
-
-//     const {
-//       studentName,
-//       certificateId,
-//       courseName,
-//       startDate,
-//       endDate,
-//       verifiedDate,
-//     } = req.body;
-
-//     // CHECK DUPLICATE ID
-
-//     const existingCertificate = await Certificatee.findOne({
-//       certificateId,
-//     });
-
-//     if (existingCertificate) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Certificate ID Already Exists",
-//       });
-//     }
-
-//     const certificate = new Certificatee({
-//       studentName,
-//       certificateId,
-//       courseName,
-//       startDate,
-//       endDate,
-//       verifiedDate,
-//     });
-
-//     await certificate.save();
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Certificate Added Successfully",
-//       certificate,
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
-
-
-
-// /*
-// ========================================
-// GET ALL CERTIFICATES
-// ========================================
-// */
-
-// app.get("/certificate/all", verifyAdminOrStaff , async (req, res) => {
-
-//   try {
-
-//     const certificates = await Certificatee.find()
-//       .sort({ createdAt: -1 });
-
-//     res.json({
-//       success: true,
-//       total: certificates.length,
-//       certificates,
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
-
-
-
-// /*
-// ========================================
-// GET SINGLE CERTIFICATE
-// ========================================
-// */
-
-// app.get("/certificate/:id",  async (req, res) => {
-
-//   try {
-
-//     const certificate = await Certificatee.findById(req.params.id);
-
-//     if (!certificate) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Certificate Not Found",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       certificate,
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
-
-
-
-// /*
-// ========================================
-// UPDATE CERTIFICATE
-// ========================================
-// */
-
-// app.patch("/certificate/update/:id",verifyAdminOrStaff , async (req, res) => {
-
-//   try {
-
-//     const certificate = await Certificatee.findByIdAndUpdate(
-//       req.params.id,
-//       req.body,
-//       {
-//         new: true,
-//       }
-//     );
-
-//     if (!certificate) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Certificate Not Found",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Certificate Updated Successfully",
-//       certificate,
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
-
-
-
-// /*
-// ========================================
-// DELETE CERTIFICATE
-// ========================================
-// */
-
-// app.delete("/certificate/delete/:id", verifyAdminOrStaff , async (req, res) => {
-
-//   try {
-
-//     const certificate = await Certificatee.findByIdAndDelete(
-//       req.params.id
-//     );
-
-//     if (!certificate) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Certificate Not Found",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Certificate Deleted Successfully",
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
-
-
-
-// /*
-// ========================================
-// VERIFY CERTIFICATE
-// ========================================
-// */
-
-// app.get("/certificate/verify/:certificateId", async (req, res) => {
-
-//   try {
-
-//     const certificate = await Certificatee.findOne({
-//       certificateId: req.params.certificateId,
-//     });
-
-//     if (!certificate) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Invalid Certificate",
-//       });
-//     }
-
-//     res.json({
-//       success: true,
-//       message: "Valid Certificate",
-//       certificate,
-//     });
-
-//   } catch (error) {
-
-//     res.status(500).json({
-//       success: false,
-//       message: error.message,
-//     });
-
-//   }
-
-// });
 
 app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
 
