@@ -30,11 +30,20 @@ const Certificatee = require("./schemas/certificate");
 const app = express()
 
 //external configuration
-app.use(bodyParser.json());
-app.use(express.json({ limit: "1000mb" }));
-app.use(express.urlencoded({ limit: "1000mb", extended: true }));
+
 app.use(cors({
-  origin: "*", 
+  origin: "*",
+}));
+
+app.use(bodyParser.json());
+
+app.use(express.json({
+  limit: "10mb",
+}));
+
+app.use(express.urlencoded({
+  extended: true,
+  limit: "10mb",
 }));
 require("./schemas/mongodb")
 
@@ -1061,15 +1070,134 @@ app.post("/addcourse" , verifyAdminOrStaff, async(req,res)=>{
 })
 
 app.get("/allcourse",async(req,res)=>{
-    const courses = await Course.find()
+    const courses = await Course.find({})
     res.send(courses)
 })
 
 
-app.patch("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
-    const id = req.params.id;
-    const doc = await Course.findByIdAndUpdate(id, req.body)     
-    res.json(req.body);
+// app.patch("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
+//     const id = req.params.id;
+//     const doc = await Course.findByIdAndUpdate(id, req.body)     
+//     res.json(req.body);
+// });
+
+app.patch(
+  "/allcourse/:id",
+  verifyAdminOrStaff,
+  async (req, res) => {
+
+    try {
+
+      const id = req.params.id;
+
+      const {
+        cardimage,
+        coursecategory,
+        courcedesc,
+        courcecreatedby,
+        courceprice,
+        instructor,
+        curriculum,
+        courseoverview,
+        whatyoulearn,
+        slug,
+        title,
+        metatitle,
+        metadescription,
+        metakeyword,
+        coursestatus
+      } = req.body;
+
+      // OLD COURSE
+      const oldCourse = await Course.findById(id);
+
+      if (!oldCourse) {
+        return res.status(404).json({
+          message: "Course not found"
+        });
+      }
+
+      // DELETE OLD CURRICULUM
+      await Curriculum.deleteMany({
+        _id: {
+          $in: oldCourse.curriculum
+        }
+      });
+
+      // CREATE NEW CURRICULUM
+      const curriculumIds = [];
+
+      for (const item of curriculum) {
+
+        const newCurriculum =
+          new Curriculum(item);
+
+        await newCurriculum.save();
+
+        curriculumIds.push(
+          newCurriculum._id
+        );
+      }
+
+      // UPDATE INSTRUCTOR
+      let instructorId =
+        oldCourse.instructor;
+
+      if (instructor) {
+
+        const updatedInstructor =
+          await Instructor.findByIdAndUpdate(
+            oldCourse.instructor,
+            instructor,
+            { new: true }
+          );
+
+        instructorId =
+          updatedInstructor._id;
+      }
+
+      // UPDATE COURSE
+      const updatedCourse =
+        await Course.findByIdAndUpdate(
+          id,
+          {
+            cardimage,
+            coursecategory,
+            courcedesc,
+            courcecreatedby,
+            courceprice,
+            courseoverview,
+            whatyoulearn,
+            slug,
+            title,
+            metatitle,
+            metadescription,
+            metakeyword,
+            coursestatus,
+            instructor: instructorId,
+            curriculum: curriculumIds,
+          },
+          {
+            new: true,
+          }
+        );
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Course updated successfully",
+        updatedCourse,
+      });
+
+    } catch (error) {
+
+      console.log(error);
+
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
 });
  
 app.delete("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
@@ -2205,17 +2333,266 @@ app.get("/api/related/:category", async (req, res) => {
   }
 });
 
+// app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
+
+//   try {
+
+//     const {
+//       studentName,
+//       certificateId,
+//       courseName,
+//       startDate,
+//       endDate,
+//       verifiedDate,
+//     } = req.body;
+
+//     // CHECK DUPLICATE ID
+
+//     const existingCertificate = await Certificatee.findOne({
+//       certificateId,
+//     });
+
+//     if (existingCertificate) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Certificate ID Already Exists",
+//       });
+//     }
+
+//     const certificate = new Certificatee({
+//       studentName,
+//       certificateId,
+//       courseName,
+//       startDate,
+//       endDate,
+//       verifiedDate,
+//     });
+
+//     await certificate.save();
+
+//     res.status(201).json({
+//       success: true,
+//       message: "Certificate Added Successfully",
+//       certificate,
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
+
+
+// /*
+// ========================================
+// GET ALL CERTIFICATES
+// ========================================
+// */
+
+// app.get("/certificate/all", verifyAdminOrStaff , async (req, res) => {
+
+//   try {
+
+//     const certificates = await Certificatee.find()
+//       .sort({ createdAt: -1 });
+
+//     res.json({
+//       success: true,
+//       total: certificates.length,
+//       certificates,
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
+
+
+// /*
+// ========================================
+// GET SINGLE CERTIFICATE
+// ========================================
+// */
+
+// app.get("/certificate/:id",  async (req, res) => {
+
+//   try {
+
+//     const certificate = await Certificatee.findById(req.params.id);
+
+//     if (!certificate) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Certificate Not Found",
+//       });
+//     }
+
+//     res.json({
+//       success: true,
+//       certificate,
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
+
+
+// /*
+// ========================================
+// UPDATE CERTIFICATE
+// ========================================
+// */
+
+// app.patch("/certificate/update/:id",verifyAdminOrStaff , async (req, res) => {
+
+//   try {
+
+//     const certificate = await Certificatee.findByIdAndUpdate(
+//       req.params.id,
+//       req.body,
+//       {
+//         new: true,
+//       }
+//     );
+
+//     if (!certificate) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Certificate Not Found",
+//       });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Certificate Updated Successfully",
+//       certificate,
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
+
+
+// /*
+// ========================================
+// DELETE CERTIFICATE
+// ========================================
+// */
+
+// app.delete("/certificate/delete/:id", verifyAdminOrStaff , async (req, res) => {
+
+//   try {
+
+//     const certificate = await Certificatee.findByIdAndDelete(
+//       req.params.id
+//     );
+
+//     if (!certificate) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Certificate Not Found",
+//       });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Certificate Deleted Successfully",
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
+
+
+// /*
+// ========================================
+// VERIFY CERTIFICATE
+// ========================================
+// */
+
+// app.get("/certificate/verify/:certificateId", async (req, res) => {
+
+//   try {
+
+//     const certificate = await Certificatee.findOne({
+//       certificateId: req.params.certificateId,
+//     });
+
+//     if (!certificate) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Invalid Certificate",
+//       });
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Valid Certificate",
+//       certificate,
+//     });
+
+//   } catch (error) {
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
+
+//   }
+
+// });
+
 app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
 
   try {
 
     const {
       studentName,
+      fatherName,
+      rollNo,
       certificateId,
       courseName,
       startDate,
       endDate,
       verifiedDate,
+      status,
     } = req.body;
 
     // CHECK DUPLICATE ID
@@ -2231,13 +2608,16 @@ app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
       });
     }
 
-    const certificate = new Certificate({
+    const certificate = new Certificatee({
       studentName,
+      fatherName,
+      rollNo,
       certificateId,
       courseName,
       startDate,
       endDate,
       verifiedDate,
+      status,
     });
 
     await certificate.save();

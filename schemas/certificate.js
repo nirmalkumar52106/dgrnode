@@ -6,6 +6,17 @@ const certificateSchema = new mongoose.Schema({
     required: true,
   },
 
+  fatherName: {
+    type: String,
+    required: true,
+  },
+
+  rollNo: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+
   certificateId: {
     type: String,
     required: true,
@@ -27,9 +38,15 @@ const certificateSchema = new mongoose.Schema({
 
   verifiedDate: {
     type: String,
-  }
+  },
+
+  status: {
+    type: String,
+    enum: ["Active", "Inactive"],
+    default: "Active",
+  },
 });
 
 const Certificatee = mongoose.model("Certificate", certificateSchema);
 
-module.exports = Certificatee
+module.exports = Certificatee;
