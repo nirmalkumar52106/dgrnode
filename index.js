@@ -24,6 +24,8 @@ const verifyStaff = require("./middlewares/verifystaff");
 const verifyAdminOrStaff = require("./middlewares/bothverify");
 const Notes = require("./schemas/notes");
 const Certificatee = require("./schemas/certificate");
+const Otp = require("./schemas/otp");
+const StudentOtp = require("./schemas/otp");
 
  
 //main server
@@ -196,43 +198,43 @@ app.patch("/editstudent/:studentId", verifyAdminOrStaff, async (req, res) => {
 });
 
 //student update password
-app.put("/student-update-password", async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(" ")[1];
+// app.put("/student-update-password", async (req, res) => {
+//   const authHeader = req.headers.authorization;
+//   const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
+//   if (!token) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-  try {
-    const decoded = jwt.verify(token, "jdbinfotech");
-    console.log("Decoded JWT:", decoded);
+//   try {
+//     const decoded = jwt.verify(token, "jdbinfotech");
+//     console.log("Decoded JWT:", decoded);
 
-    const student = await Student.findById(decoded.id);
-    console.log("Student found:", student);
+//     const student = await Student.findById(decoded.id);
+//     console.log("Student found:", student);
 
-    if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found" });
-    }
+//     if (!student) {
+//       return res.status(404).json({ success: false, message: "Student not found" });
+//     }
 
-    const { currentPassword, newPassword } = req.body;
-    console.log("Current password from client:", currentPassword);
+//     const { currentPassword, newPassword } = req.body;
+//     console.log("Current password from client:", currentPassword);
 
-    const isMatch = await bcrypt.compare(currentPassword, student.password);
-    console.log("Password match:", isMatch);
+//     const isMatch = await bcrypt.compare(currentPassword, student.password);
+//     console.log("Password match:", isMatch);
 
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Current password is incorrect" });
-    }
+//     if (!isMatch) {
+//       return res.status(400).json({ success: false, message: "Current password is incorrect" });
+//     }
 
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    student.password = hashedNewPassword;
-    await student.save();
+//     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+//     student.password = hashedNewPassword;
+//     await student.save();
 
-    res.json({ success: true, message: "Password updated successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error", error: err.message });
-  }
-});
+//     res.json({ success: true, message: "Password updated successfully" });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ success: false, message: "Server error", error: err.message });
+//   }
+// });
 
 //verify student
 const verifyStudent = (req, res, next) => {
@@ -247,6 +249,166 @@ const verifyStudent = (req, res, next) => {
     return res.status(401).json({ success: false, message: "Invalid token" });
   }
 };
+
+
+app.post("/student-send-otp", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const student = await Student.findOne({ email });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await StudentOtp.deleteMany({ email });
+
+    await StudentOtp.create({
+      email,
+      otp,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 min
+    });
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "jdbinfotechsolution@gmail.com",
+        pass: "jbsafvdrdxacqynq",
+      },
+    });
+
+    await transporter.sendMail({
+      from: "JDB Infotech",
+      to: email,
+      subject: "Password Reset OTP",
+      html: `
+        <div style="font-family:Arial">
+          <h2>JDB Infotech</h2>
+          <p>Your OTP for password reset is:</p>
+          <h1>${otp}</h1>
+          <p>Valid for 5 minutes only.</p>
+        </div>
+      `
+    });
+
+    res.json({
+      success: true,
+      message: "OTP sent successfully"
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+});
+
+app.post("/student-verify-otp", async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    const otpData = await StudentOtp.findOne({ email });
+
+    if (!otpData) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found"
+      });
+    }
+
+    if (otpData.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
+    }
+
+    if (otpData.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "OTP verified"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+});
+
+
+app.put("/student-reset-password", async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const otpData = await StudentOtp.findOne({ email });
+
+    if (!otpData) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found"
+      });
+    }
+
+    if (otpData.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
+    }
+
+    if (otpData.expiresAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
+    }
+
+    const student = await Student.findOne({ email });
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    student.password = hashedPassword;
+
+    await student.save();
+
+    await StudentOtp.deleteOne({ email });
+
+    res.json({
+      success: true,
+      message: "Password reset successfully"
+    });
+
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error"
+    });
+  }
+});
 
 app.get("/student-attendance", verifyStudent, async (req, res) => {
   try {
@@ -1065,131 +1227,9 @@ app.get("/allcourse",async(req,res)=>{
 })
 
 
-// app.patch("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
-//     const id = req.params.id;
-//     const doc = await Course.findByIdAndUpdate(id, req.body)     
-//     res.json(req.body);
-// });
 
 
-// app.patch(
-//   "/allcourse/:id",
-//   verifyAdminOrStaff,
-//   async (req, res) => {
 
-//     try {
-
-//       const id = req.params.id;
-
-//       const {
-//         cardimage,
-//         coursecategory,
-//         courcedesc,
-//         courcecreatedby,
-//         courceprice,
-//         instructor,
-//         curriculum,
-//         courseoverview,
-//         whatyoulearn,
-//         slug,
-//         title,
-//         metatitle,
-//         metadescription,
-//         metakeyword,
-//         coursestatus
-//       } = req.body;
-
-//       // OLD COURSE
-//       const oldCourse = await Course.findById(id);
-
-//       if (!oldCourse) {
-//         return res.status(404).json({
-//           message: "Course not found"
-//         });
-//       }
-
-//       // DELETE OLD CURRICULUM
-//       await Curriculum.deleteMany({
-//         _id: {
-//           $in: oldCourse.curriculum
-//         }
-//       });
-
-//       // CREATE NEW CURRICULUM
-//       const curriculumIds = [];
-
-//       for (const item of curriculum) {
-
-//         const newCurriculum =
-//           new Curriculum(item);
-
-//         await newCurriculum.save();
-
-//         curriculumIds.push(
-//           newCurriculum._id
-//         );
-//       }
-
-//       // UPDATE INSTRUCTOR
-//       let instructorId =
-//         oldCourse.instructor;
-
-//       if (instructor) {
-
-//         const updatedInstructor =
-//           await Instructor.findByIdAndUpdate(
-//             oldCourse.instructor,
-//             instructor,
-//             { new: true }
-//           );
-
-//         instructorId =
-//           updatedInstructor._id;
-//       }
-
-//       // UPDATE COURSE
-//       const updatedCourse =
-//         await Course.findByIdAndUpdate(
-//           id,
-//           {
-//             cardimage,
-//             coursecategory,
-//             courcedesc,
-//             courcecreatedby,
-//             courceprice,
-//             courseoverview,
-//             whatyoulearn,
-//             slug,
-//             title,
-//             metatitle,
-//             metadescription,
-//             metakeyword,
-//             coursestatus,
-//             instructor: instructorId,
-//             curriculum: curriculumIds,
-//           },
-//           {
-//             new: true,
-//           }
-//         );
-
-//       res.status(200).json({
-//         success: true,
-//         message:
-//           "Course updated successfully",
-//         updatedCourse,
-//       });
-
-//     } catch (error) {
-
-//       console.log(error);
-
-//       res.status(500).json({
-//         success: false,
-//         message: error.message,
-//       });
-//     }
-// });
 
 
 app.patch(
