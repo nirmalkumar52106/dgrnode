@@ -26,6 +26,8 @@ const Notes = require("./schemas/notes");
 const Certificatee = require("./schemas/certificate");
 const Otp = require("./schemas/otp");
 const StudentOtp = require("./schemas/otp");
+const upload = require("./middlewares/upload");
+const uploadToCloudinary = require("./config/uploadtocloud");
 
  
 //main server
@@ -1029,42 +1031,88 @@ app.patch("/allenquiry/:id", verifyAdminOrStaff, async(req,res)=>{
 
 
 //blog post####################################################################
-app.post("/addblog" , verifyAdminOrStaff, async(req,res)=>{
-    const blog = new Blog({
-        blogtitle : req.body.blogtitle,
-        blogdesc : req.body.blogdesc,
-        blogimage : req.body.blogimage,
-        blogdate : req.body.blogdate,
-        metatitle : req.body.metatitle,
-        metakey : req.body.metakey,
-        metadesc :  req.body.metadesc,
-        slugurl : req.body.slugurl,
-        createdby : req.body.createdby,
-    })
+// app.post("/addblog" , verifyAdminOrStaff, async(req,res)=>{
+//     const blog = new Blog({
+//         blogtitle : req.body.blogtitle,
+//         blogdesc : req.body.blogdesc,
+//         blogimage : req.body.blogimage,
+//         blogdate : req.body.blogdate,
+//         metatitle : req.body.metatitle,
+//         metakey : req.body.metakey,
+//         metadesc :  req.body.metadesc,
+//         slugurl : req.body.slugurl,
+//         createdby : req.body.createdby,
+//     })
     
 
-    const doc = await blog.save()
-    console.log(doc)
-     console.log(req.body)
-     res.json(req.body)
-     try{
-         if(blog){
-             res.status(200).json({
-                 doc:doc,
-                 status:true,
-                 message:"New Blog Added...!"
-             })
-         }
-         else{
-             res.status(404).json({
-                 error:err,
-                 message:"Something went wrong"
-             });
-         }
-     }catch(err){ 
- console.log(err)
-     }
-})
+//     const doc = await blog.save()
+//     console.log(doc)
+//      console.log(req.body)
+//      res.json(req.body)
+//      try{
+//          if(blog){
+//              res.status(200).json({
+//                  doc:doc,
+//                  status:true,
+//                  message:"New Blog Added...!"
+//              })
+//          }
+//          else{
+//              res.status(404).json({
+//                  error:err,
+//                  message:"Something went wrong"
+//              });
+//          }
+//      }catch(err){ 
+//  console.log(err)
+//      }
+// })
+
+app.post(
+  "/addblog",
+  verifyAdminOrStaff,
+  upload.single("blogimage"),
+  async (req, res) => {
+    try {
+      let imageUrl = "";
+
+      if (req.file) {
+        const uploaded = await uploadToCloudinary(
+          req.file.buffer
+        );
+
+        imageUrl = uploaded.secure_url;
+      }
+
+      const blog = new Blog({
+        blogtitle: req.body.blogtitle,
+        blogdesc: req.body.blogdesc,
+        blogimage: imageUrl,
+        blogdate: req.body.blogdate,
+        metatitle: req.body.metatitle,
+        metakey: req.body.metakey,
+        metadesc: req.body.metadesc,
+        slugurl: req.body.slugurl,
+        createdby: req.body.createdby,
+      });
+
+      const doc = await blog.save();
+
+      res.status(200).json({
+        status: true,
+        doc,
+        message: "Blog Added Successfully",
+      });
+    } catch (err) {
+      console.log(err);
+
+      res.status(500).json({
+        status: false,
+        message: err.message,
+      });
+    }
+  }
+);
 
 app.get("/allblog", async (req, res) => {
   try {
