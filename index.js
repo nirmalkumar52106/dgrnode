@@ -1158,6 +1158,28 @@ app.post(
                 : ""
             }
 
+           <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-top:20px;">
+  <p>
+    <strong>🌐 Visit Blog:</strong>
+  </p>
+
+  <a
+    href="https://jdbinfotech.co.in/blog/${doc.slugurl}"
+    target="_blank"
+    style="
+      display:inline-block;
+      background:#0d6efd;
+      color:#ffffff;
+      text-decoration:none;
+      padding:10px 20px;
+      border-radius:5px;
+      margin-top:10px;
+    "
+  >
+    Read Full Blog
+  </a>
+</div>
+
             <div style="padding:25px;">
 
               <h2 style="color:#0d6efd;">
