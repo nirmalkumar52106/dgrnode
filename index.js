@@ -1030,43 +1030,52 @@ app.patch("/allenquiry/:id", verifyAdminOrStaff, async(req,res)=>{
 });
 
 
-//blog post####################################################################
-// app.post("/addblog" , verifyAdminOrStaff, async(req,res)=>{
-//     const blog = new Blog({
-//         blogtitle : req.body.blogtitle,
-//         blogdesc : req.body.blogdesc,
-//         blogimage : req.body.blogimage,
-//         blogdate : req.body.blogdate,
-//         metatitle : req.body.metatitle,
-//         metakey : req.body.metakey,
-//         metadesc :  req.body.metadesc,
-//         slugurl : req.body.slugurl,
-//         createdby : req.body.createdby,
-//     })
-    
 
-//     const doc = await blog.save()
-//     console.log(doc)
-//      console.log(req.body)
-//      res.json(req.body)
-//      try{
-//          if(blog){
-//              res.status(200).json({
-//                  doc:doc,
-//                  status:true,
-//                  message:"New Blog Added...!"
-//              })
-//          }
-//          else{
-//              res.status(404).json({
-//                  error:err,
-//                  message:"Something went wrong"
-//              });
-//          }
-//      }catch(err){ 
-//  console.log(err)
-//      }
-// })
+// app.post(
+//   "/addblog",
+//   verifyAdminOrStaff,
+//   upload.single("blogimage"),
+//   async (req, res) => {
+//     try {
+//       let imageUrl = "";
+
+//       if (req.file) {
+//         const uploaded = await uploadToCloudinary(
+//           req.file.buffer
+//         );
+
+//         imageUrl = uploaded.secure_url;
+//       }
+
+//       const blog = new Blog({
+//         blogtitle: req.body.blogtitle,
+//         blogdesc: req.body.blogdesc,
+//         blogimage: imageUrl,
+//         blogdate: req.body.blogdate,
+//         metatitle: req.body.metatitle,
+//         metakey: req.body.metakey,
+//         metadesc: req.body.metadesc,
+//         slugurl: req.body.slugurl,
+//         createdby: req.body.createdby,
+//       });
+
+//       const doc = await blog.save();
+
+//       res.status(200).json({
+//         status: true,
+//         doc,
+//         message: "Blog Added Successfully",
+//       });
+//     } catch (err) {
+//       console.log(err);
+
+//       res.status(500).json({
+//         status: false,
+//         message: err.message,
+//       });
+//     }
+//   }
+// );
 
 app.post(
   "/addblog",
@@ -1098,6 +1107,160 @@ app.post(
 
       const doc = await blog.save();
 
+      // ==========================
+      // EMAIL FUNCTIONALITY START
+      // ==========================
+
+      try {
+        const students = await Student.find(
+          {
+            email: { $exists: true, $ne: "" },
+          },
+          "email name"
+        );
+
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: "jdbinfotechsolution@gmail.com",
+            pass: "jbsafvdrdxacqynq",
+          },
+        });
+
+        const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+        </head>
+        <body style="margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;">
+
+          <div style="max-width:700px;margin:20px auto;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 0 10px rgba(0,0,0,0.1);">
+
+            <div style="background:#0d6efd;padding:25px;text-align:center;">
+              <h1 style="color:white;margin:0;">
+                JDB INFOTECH
+              </h1>
+              <p style="color:white;margin-top:10px;">
+                Best Institute For Web Development & Digital Marketing
+              </p>
+            </div>
+
+            ${
+              doc.blogimage
+                ? `
+              <img
+                src="${doc.blogimage}"
+                alt="${doc.blogtitle}"
+                style="width:100%;display:block;"
+              />
+            `
+                : ""
+            }
+
+            <div style="padding:25px;">
+
+              <h2 style="color:#0d6efd;">
+                ${doc.blogtitle}
+              </h2>
+
+              <div style="font-size:16px;line-height:1.8;color:#333;">
+                ${doc.blogdesc}
+              </div>
+
+              <hr style="margin:25px 0;" />
+
+              <h3 style="color:#0d6efd;">
+                About JDB Infotech
+              </h3>
+
+              <p style="line-height:1.8;">
+                JDB Infotech is Jaipur's leading training institute for
+                Web Development, MERN Stack Development,
+                React JS, Node JS, Digital Marketing,
+                SEO, Google Ads and Professional IT Courses.
+              </p>
+
+              <p>
+                Students get practical projects,
+                internship support and placement assistance.
+              </p>
+
+              <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-top:20px;">
+                <p><strong>🌐 Website:</strong>
+                  <a href="https://jdbinfotech.co.in">
+                    https://jdbinfotech.co.in
+                  </a>
+                </p>
+
+                <p><strong>📞 Mobile:</strong>
+                  <a href="tel:7073734854">
+                    7073734854
+                  </a>
+                </p>
+
+                <p><strong>📍 Address:</strong><br/>
+                  305, 3rd Floor, Pink City 2,<br/>
+                  Joshi Marg, Jhotwara,<br/>
+                  Jaipur, Rajasthan
+                </p>
+              </div>
+
+              <div style="text-align:center;margin-top:25px;">
+                <a
+                  href="https://jdbinfotech.co.in"
+                  style="
+                    background:#0d6efd;
+                    color:white;
+                    text-decoration:none;
+                    padding:12px 25px;
+                    border-radius:6px;
+                    display:inline-block;
+                  "
+                >
+                  Visit Website
+                </a>
+              </div>
+
+            </div>
+
+            <div style="background:#0d6efd;padding:15px;text-align:center;color:white;">
+              © ${new Date().getFullYear()} JDB Infotech
+            </div>
+
+          </div>
+
+        </body>
+        </html>
+        `;
+
+        students.forEach(async (student) => {
+          try {
+            await transporter.sendMail({
+              from: "jdbinfotechsolution@gmail.com",
+              to: student.email,
+              subject: `📢 New Blog Published - ${doc.blogtitle}`,
+              html: emailHtml,
+            });
+          } catch (emailError) {
+            console.log(
+              "Email Error:",
+              student.email,
+              emailError.message
+            );
+          }
+        });
+      } catch (emailMainError) {
+        console.log(
+          "Email Process Error:",
+          emailMainError.message
+        );
+      }
+
+      // ==========================
+      // EMAIL FUNCTIONALITY END
+      // ==========================
+
       res.status(200).json({
         status: true,
         doc,
@@ -1113,6 +1276,7 @@ app.post(
     }
   }
 );
+
 
 app.get("/allblog", async (req, res) => {
   try {
