@@ -28,6 +28,8 @@ const Otp = require("./schemas/otp");
 const StudentOtp = require("./schemas/otp");
 const upload = require("./middlewares/upload");
 const uploadToCloudinary = require("./config/uploadtocloud");
+const PlaceduploadToCloudinary = require("./config/Placeduploadtocloud");
+const Placement = require("./schemas/placement");
 
  
 //main server
@@ -3046,6 +3048,410 @@ app.get("/certificate/verify/:certificateId", async (req, res) => {
   }
 
 });
+
+
+// placed students
+
+app.post(
+  "/addplacement",
+  verifyAdminOrStaff,
+  upload.single("image"),
+  async (req, res) => {
+    let uploadedImage = null;
+
+    try {
+      const {
+        name,
+        package,
+        designation,
+        company,
+        description,
+        location,
+        batch,
+        skills,
+        achievement,
+        isActive,
+        displayOrder,
+      } = req.body;
+
+      if (
+        !name ||
+        !package ||
+        !designation ||
+        !company ||
+        !description ||
+        !location ||
+        !batch ||
+        !achievement
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill all required fields",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Student image is required",
+        });
+      }
+
+      uploadedImage = await PlaceduploadToCloudinary(
+        req.file.buffer,
+        "placements"
+      );
+
+      let formattedSkills = [];
+
+      if (skills) {
+        formattedSkills = skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean);
+      }
+
+      const placement = new Placement({
+        name,
+        image: uploadedImage.secure_url,
+        imagePublicId: uploadedImage.public_id,
+        package,
+        designation,
+        company,
+        description,
+        location,
+        batch,
+        skills: formattedSkills,
+        achievement,
+        isActive:
+          isActive !== undefined
+            ? String(isActive) === "true"
+            : true,
+        displayOrder: Number(displayOrder) || 0,
+      });
+
+      const savedPlacement =
+        await placement.save();
+
+      return res.status(201).json({
+        success: true,
+        message: "Placement added successfully",
+        placement: savedPlacement,
+      });
+    } catch (error) {
+      if (uploadedImage?.public_id) {
+        await Cloudinary.uploader.destroy(
+          uploadedImage.public_id
+        );
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to add placement",
+        error: error.message,
+      });
+    }
+  }
+);
+
+app.get(
+  "/allplacements",
+  async (req, res) => {
+    try {
+      const placements = await Placement.find().sort({
+        displayOrder: 1,
+        createdAt: -1,
+      });
+
+      return res.status(200).json({
+        success: true,
+        placements,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to fetch placements",
+        error: error.message,
+      });
+    }
+  }
+);
+
+
+
+app.get(
+  "/publicplacements",
+  async (req, res) => {
+    try {
+      const placements = await Placement.find({
+        isActive: true,
+      }).sort({
+        displayOrder: 1,
+        createdAt: -1,
+      });
+
+      return res.status(200).json({
+        success: true,
+        placements,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to fetch placements",
+        error: error.message,
+      });
+    }
+  }
+);
+
+app.get(
+  "/placement/:id",
+  async (req, res) => {
+    try {
+      const placement = await Placement.findById(
+        req.params.id
+      );
+
+      if (!placement) {
+        return res.status(404).json({
+          success: false,
+          message: "Placement not found",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        placement,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to fetch placement",
+        error: error.message,
+      });
+    }
+  }
+);
+
+
+app.put(
+  "/updateplacement/:id",
+  verifyAdminOrStaff,
+  upload.single("image"),
+  async (req, res) => {
+    let newUploadedImage = null;
+
+    try {
+      const placement = await Placement.findById(
+        req.params.id
+      );
+
+      if (!placement) {
+        return res.status(404).json({
+          success: false,
+          message: "Placement not found",
+        });
+      }
+
+      const {
+        name,
+        package,
+        designation,
+        company,
+        description,
+        location,
+        batch,
+        skills,
+        achievement,
+        isActive,
+        displayOrder,
+      } = req.body;
+
+      const updateData = {};
+
+      if (name !== undefined) {
+        updateData.name = name;
+      }
+
+      if (package !== undefined) {
+        updateData.package = package;
+      }
+
+      if (designation !== undefined) {
+        updateData.designation = designation;
+      }
+
+      if (company !== undefined) {
+        updateData.company = company;
+      }
+
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+
+      if (location !== undefined) {
+        updateData.location = location;
+      }
+
+      if (batch !== undefined) {
+        updateData.batch = batch;
+      }
+
+      if (achievement !== undefined) {
+        updateData.achievement = achievement;
+      }
+
+      if (skills !== undefined) {
+        updateData.skills = skills
+          .split(",")
+          .map((skill) => skill.trim())
+          .filter(Boolean);
+      }
+
+      if (isActive !== undefined) {
+        updateData.isActive =
+          String(isActive) === "true";
+      }
+
+      if (displayOrder !== undefined) {
+        updateData.displayOrder =
+          Number(displayOrder) || 0;
+      }
+
+      if (req.file) {
+        newUploadedImage =
+          await uploadToCloudinary(
+            req.file.buffer,
+            "placements"
+          );
+
+        updateData.image =
+          newUploadedImage.secure_url;
+
+        updateData.imagePublicId =
+          newUploadedImage.public_id;
+      }
+
+      const updatedPlacement =
+        await Placement.findByIdAndUpdate(
+          req.params.id,
+          updateData,
+          {
+            new: true,
+            runValidators: true,
+          }
+        );
+
+      if (
+        req.file &&
+        placement.imagePublicId
+      ) {
+        await Cloudinary.uploader.destroy(
+          placement.imagePublicId
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Placement updated successfully",
+        placement: updatedPlacement,
+      });
+    } catch (error) {
+      if (newUploadedImage?.public_id) {
+        await Cloudinary.uploader.destroy(
+          newUploadedImage.public_id
+        );
+      }
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to update placement",
+        error: error.message,
+      });
+    }
+  }
+);
+
+app.delete(
+  "/deleteplacement/:id",
+  verifyAdminOrStaff,
+  async (req, res) => {
+    try {
+      const placement = await Placement.findById(
+        req.params.id
+      );
+
+      if (!placement) {
+        return res.status(404).json({
+          success: false,
+          message: "Placement not found",
+        });
+      }
+
+      if (placement.imagePublicId) {
+        await Cloudinary.uploader.destroy(
+          placement.imagePublicId
+        );
+      }
+
+      await Placement.findByIdAndDelete(
+        req.params.id
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Placement deleted successfully",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to delete placement",
+        error: error.message,
+      });
+    }
+  }
+);
+
+
+app.patch(
+  "/placementstatus/:id",
+  verifyAdminOrStaff,
+  async (req, res) => {
+    try {
+      const placement = await Placement.findById(
+        req.params.id
+      );
+
+      if (!placement) {
+        return res.status(404).json({
+          success: false,
+          message: "Placement not found",
+        });
+      }
+
+      placement.isActive =
+        !placement.isActive;
+
+      await placement.save();
+
+      return res.status(200).json({
+        success: true,
+        message: placement.isActive
+          ? "Placement activated successfully"
+          : "Placement deactivated successfully",
+        placement,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message:
+          "Unable to update placement status",
+        error: error.message,
+      });
+    }
+  }
+);
+
 
 
 
