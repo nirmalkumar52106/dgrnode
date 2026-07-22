@@ -3234,7 +3234,7 @@ app.get(
 );
 
 
-app.put(
+app.patch(
   "/updateplacement/:id",
   verifyAdminOrStaff,
   upload.single("image"),
