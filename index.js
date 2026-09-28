@@ -30,6 +30,7 @@ const upload = require("./middlewares/upload");
 const uploadToCloudinary = require("./config/uploadtocloud");
 const PlaceduploadToCloudinary = require("./config/Placeduploadtocloud");
 const Placement = require("./schemas/placement");
+const StudentuploadToCloudinary = require("./config/studentphoto");
 
  
 //main server
@@ -46,36 +47,124 @@ require("./schemas/mongodb")
 
 
 //student register
-app.post("/studentregister", verifyAdminOrStaff, async (req, res) => {
-  try {
-    const { studentId, password, name, email, mobile, parentMobile, address, courseName } = req.body;
+// app.post("/studentregister", verifyAdminOrStaff, async (req, res) => {
+//   try {
+//     const { studentId, password, name, email, mobile, parentMobile, address, courseName } = req.body;
 
-    const existing = await Student.findOne({ studentId });
-    if (existing) {
-      return res.status(400).json({ success: false, message: "Student already exists" });
-    }
+//     const existing = await Student.findOne({ studentId });
+//     if (existing) {
+//       return res.status(400).json({ success: false, message: "Student already exists" });
+//     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+//     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newStudent = new Student({
-      studentId,
-      password: hashedPassword,
-      name,
-      email,
-      mobile,
-      parentMobile,
-      address,
-      course: {
-        name: courseName
+//     const newStudent = new Student({
+//       studentId,
+//       password: hashedPassword,
+//       name,
+//       email,
+//       mobile,
+//       parentMobile,
+//       address,
+//       course: {
+//         name: courseName
+//       }
+//     });
+
+//     await newStudent.save();
+//     res.status(200).json({ success: true, message: "Student registered successfully" });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Registration failed", error: error.message });
+//   }
+// });
+
+app.post(
+  "/studentregister",
+  verifyAdminOrStaff,
+  upload.single("photo"),
+  async (req, res) => {
+    try {
+      let photoUrl = "";
+
+      if (req.file) {
+        const uploaded = await StudentuploadToCloudinary(
+          req.file.buffer
+        );
+
+        photoUrl = uploaded.secure_url;
       }
-    });
 
-    await newStudent.save();
-    res.status(200).json({ success: true, message: "Student registered successfully" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Registration failed", error: error.message });
+      const {
+        studentId,
+        password,
+        name,
+        email,
+        mobile,
+        parentMobile,
+        address,
+        courseName,
+        fatherName,
+        motherName,
+        dob,
+        gender,
+      } = req.body;
+
+      const existing = await Student.findOne({ studentId });
+
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Student already exists",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newStudent = new Student({
+        studentId,
+        password: hashedPassword,
+        name,
+        email,
+        mobile,
+        parentMobile,
+        address,
+
+        fatherName: fatherName || "",
+        motherName: motherName || "",
+        dob: dob || null,
+        gender: gender || "Other",
+
+        photo: photoUrl,
+
+        course: {
+          name: courseName,
+          status: "Ongoing",
+        },
+      });
+
+      await newStudent.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Student registered successfully",
+        student: {
+          studentId: newStudent.studentId,
+          name: newStudent.name,
+          photo: newStudent.photo,
+        },
+      });
+
+    } catch (error) {
+      console.error("Student registration error:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Registration failed",
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 //student login
 app.post("/student-login", async (req, res) => {
@@ -158,48 +247,164 @@ app.delete("/deletestudent/:studentId", verifyAdminOrStaff, async (req, res) => 
 });
 
 
-app.patch("/editstudent/:studentId", verifyAdminOrStaff, async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
+// app.patch("/editstudent/:studentId", verifyAdminOrStaff, async (req, res) => {
+//   try {
+//     const { studentId } = req.params;
+//     const { name, email, mobile, parentMobile, address, courseName, courseStatus, grade } = req.body;
 
-    const student = await Student.findOne({ studentId });
-    if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+//     const student = await Student.findOne({ studentId });
+//     if (!student) {
+//       return res.status(404).json({ message: "Student not found" });
+//     }
+
+//     student.name = name || student.name;
+//     student.email = email || student.email;
+//     student.mobile = mobile || student.mobile;
+//     student.parentMobile = parentMobile || student.parentMobile;
+//     student.address = address || student.address;
+
+//     // 🔥 FIX
+//     if (!student.course) {
+//       student.course = {};
+//     }
+
+//     if (courseName !== undefined) {
+//       student.course.name = courseName;
+//     }
+
+//     if (courseStatus !== undefined) {
+//       student.course.status = courseStatus;
+//     }
+
+//     if (grade !== undefined) {
+//       student.grade = grade;
+//     }
+
+//     await student.save();
+
+//     res.status(200).json({ message: "Student updated successfully", student });
+
+//   } catch (error) {
+//     console.error("Error updating student:", error);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// });
+
+app.patch(
+  "/editstudent/:studentId",
+  verifyAdminOrStaff,
+  upload.single("photo"),
+  async (req, res) => {
+    try {
+      const { studentId } = req.params;
+
+      const {
+        name,
+        email,
+        mobile,
+        parentMobile,
+        address,
+        courseName,
+        courseStatus,
+        grade,
+        fatherName,
+        motherName,
+        dob,
+        gender,
+      } = req.body;
+
+      const student = await Student.findOne({ studentId });
+
+      if (!student) {
+        return res.status(404).json({
+          success: false,
+          message: "Student not found",
+        });
+      }
+
+      // Basic details
+      if (name !== undefined) {
+        student.name = name;
+      }
+
+      if (email !== undefined) {
+        student.email = email;
+      }
+
+      if (mobile !== undefined) {
+        student.mobile = mobile;
+      }
+
+      if (parentMobile !== undefined) {
+        student.parentMobile = parentMobile;
+      }
+
+      if (address !== undefined) {
+        student.address = address;
+      }
+
+      // Admit Card details
+      if (fatherName !== undefined) {
+        student.fatherName = fatherName;
+      }
+
+      if (motherName !== undefined) {
+        student.motherName = motherName;
+      }
+
+      if (dob !== undefined) {
+        student.dob = dob || null;
+      }
+
+      if (gender !== undefined) {
+        student.gender = gender;
+      }
+
+      // Course
+      if (!student.course) {
+        student.course = {};
+      }
+
+      if (courseName !== undefined) {
+        student.course.name = courseName;
+      }
+
+      if (courseStatus !== undefined) {
+        student.course.status = courseStatus;
+      }
+
+      if (grade !== undefined) {
+        student.grade = grade;
+      }
+
+      // New Photo
+      if (req.file) {
+        const uploaded = await StudentuploadToCloudinary(
+          req.file.buffer
+        );
+
+        student.photo = uploaded.secure_url;
+      }
+
+      await student.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Student updated successfully",
+        student,
+      });
+
+    } catch (error) {
+      console.error("Error updating student:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Server error",
+        error: error.message,
+      });
     }
-
-    student.name = name || student.name;
-    student.email = email || student.email;
-    student.mobile = mobile || student.mobile;
-    student.parentMobile = parentMobile || student.parentMobile;
-    student.address = address || student.address;
-
-    // 🔥 FIX
-    if (!student.course) {
-      student.course = {};
-    }
-
-    if (courseName !== undefined) {
-      student.course.name = courseName;
-    }
-
-    if (courseStatus !== undefined) {
-      student.course.status = courseStatus;
-    }
-
-    if (grade !== undefined) {
-      student.grade = grade;
-    }
-
-    await student.save();
-
-    res.status(200).json({ message: "Student updated successfully", student });
-
-  } catch (error) {
-    console.error("Error updating student:", error);
-    res.status(500).json({ message: "Server error" });
   }
-});
+);
 
 //student update password
 // app.put("/student-update-password", async (req, res) => {
@@ -302,7 +507,7 @@ app.post("/student-send-otp", async (req, res) => {
 
     res.json({
       success: true,
-      message: "OTP sent successfully"
+      message: "OTP sent successfully" 
     });
 
   } catch (error) {
