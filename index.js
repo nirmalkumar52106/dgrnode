@@ -61,10 +61,8 @@ app.post(
   "/send-student-admit-card",
   verifyAdminOrStaff,
   async (req, res) => {
-    let browser;
-
     try {
-      const { studentId } = req.body;
+      const { studentId, pdfBase64 } = req.body;
 
       if (!studentId) {
         return res.status(400).json({
@@ -73,9 +71,12 @@ app.post(
         });
       }
 
-      // ==============================
-      // GET STUDENT
-      // ==============================
+      if (!pdfBase64) {
+        return res.status(400).json({
+          success: false,
+          message: "Admit card PDF is required",
+        });
+      }
 
       const student = await Student.findOne({
         studentId,
@@ -95,408 +96,26 @@ app.post(
         });
       }
 
-      // ==============================
-      // STUDENT DATA
-      // ==============================
-
-      const courseName =
-        student?.course?.name || "Not Assigned";
-
-      const courseStatus =
-        student?.course?.status || "Ongoing";
-
-      const photo =
-        student?.photo ||
-        "";
-
-      const dob = student?.dob
-        ? new Date(student.dob).toLocaleDateString("en-IN")
-        : "Not Provided";
-
-      // ==============================
-      // ADMIT CARD HTML
-      // ==============================
-
-      const admitCardHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-
-<style>
-
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background: #eef3f8;
-  font-family: "Poppins", Arial, sans-serif;
-}
-
-.admit-card {
-  width: 1120px;
-  min-height: 790px;
-  margin: 30px auto;
-  background: #ffffff;
-  border: 3px solid #123b68;
-  border-radius: 18px;
-  overflow: hidden;
-  position: relative;
-}
-
-.header {
-  background: #123b68;
-  color: white;
-  padding: 28px 35px;
-  text-align: center;
-}
-
-.header h1 {
-  margin: 0;
-  font-family: "Montserrat", sans-serif;
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.header p {
-  margin: 7px 0 0;
-  font-size: 14px;
-}
-
-.title {
-  text-align: center;
-  padding: 22px 20px 12px;
-}
-
-.title h2 {
-  margin: 0;
-  font-family: "Montserrat", sans-serif;
-  color: #123b68;
-  font-size: 27px;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.title span {
-  display: block;
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.content {
-  display: flex;
-  gap: 35px;
-  padding: 25px 45px;
-}
-
-.photo-section {
-  width: 210px;
-  text-align: center;
-}
-
-.photo {
-  width: 175px;
-  height: 205px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 4px solid #123b68;
-}
-
-.photo-section p {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #475569;
-}
-
-.details {
-  flex: 1;
-}
-
-.details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.detail {
-  border: 1px solid #dbe4ee;
-  border-radius: 8px;
-  padding: 12px 15px;
-  background: #f8fafc;
-}
-
-.detail label {
-  display: block;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.detail strong {
-  color: #172033;
-  font-size: 15px;
-}
-
-.course-box {
-  margin-top: 20px;
-  padding: 15px;
-  border-radius: 9px;
-  background: #eaf2fb;
-  border-left: 5px solid #123b68;
-}
-
-.course-box label {
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 600;
-}
-
-.course-box strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 18px;
-  color: #123b68;
-}
-
-.footer {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 15px 35px;
-  border-top: 1px solid #dbe4ee;
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.footer strong {
-  color: #123b68;
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="admit-card">
-
-  <div class="header">
-    <h1>JDB INFOTECH</h1>
-    <p>
-      Web Development & Digital Marketing Training Institute
-    </p>
-  </div>
-
-  <div class="title">
-    <h2>ADMIT CARD</h2>
-    <span>Student Examination / Assessment</span>
-  </div>
-
-  <div class="content">
-
-    <div class="photo-section">
-
-      <img
-        src="${photo}"
-        class="photo"
-      />
-
-      <p>
-        Student Photo
-      </p>
-
-    </div>
-
-    <div class="details">
-
-      <div class="details-grid">
-
-        <div class="detail">
-          <label>Student ID</label>
-          <strong>${student.studentId || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Student Name</label>
-          <strong>${student.name || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Father Name</label>
-          <strong>${student.fatherName || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Mother Name</label>
-          <strong>${student.motherName || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Date of Birth</label>
-          <strong>${dob}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Gender</label>
-          <strong>${student.gender || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Mobile</label>
-          <strong>${student.mobile || "-"}</strong>
-        </div>
-
-        <div class="detail">
-          <label>Email</label>
-          <strong>${student.email || "-"}</strong>
-        </div>
-
-      </div>
-
-      <div class="course-box">
-
-        <label>COURSE</label>
-
-        <strong>
-          ${courseName}
-        </strong>
-
-        <div style="margin-top:7px;font-size:12px;">
-          Status: ${courseStatus}
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <div class="footer">
-
-    <span>
-      JDB Infotech • Jaipur, Rajasthan
-    </span>
-
-    <strong>
-      Official Admit Card
-    </strong>
-
-  </div>
-
-</div>
-
-</body>
-</html>
-`;
-
-      // ==============================
-      // GENERATE PDF
-      // ==============================
-   // ==============================
-// GENERATE PDF
-// ==============================
-const { default: puppeteer } = await import("puppeteer-core");
-const { default: chromium } = await import("@sparticuz/chromium");
-
-browser = await puppeteer.launch({
-  args: chromium.args,
-  defaultViewport: chromium.defaultViewport,
-  executablePath: await chromium.executablePath(),
-  headless: chromium.headless,
-});
-
-const page = await browser.newPage();
-
-await page.setViewport({
-  width: 1200,
-  height: 900,
-  deviceScaleFactor: 1,
-});
-
-await page.setContent(admitCardHtml, {
-  waitUntil: "domcontentloaded",
-});
-
-// Wait for images
-await page.evaluate(async () => {
-  const images = Array.from(document.images);
-
-  await Promise.all(
-    images.map((img) => {
-      if (img.complete) {
-        return Promise.resolve();
-      }
-
-      return new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
-    })
-  );
-});
-
-const pdfBuffer = await page.pdf({
-  format: "A4",
-  landscape: true,
-  printBackground: true,
-  margin: {
-    top: "10mm",
-    right: "10mm",
-    bottom: "10mm",
-    left: "10mm",
-  },
-});
-
-await browser.close();
-browser = null;
-
-      // ==============================
-      // SEND EMAIL
-      // ==============================
+      // Remove data URL prefix
+      const base64Data = pdfBase64.replace(
+        /^data:application\/pdf;base64,/,
+        ""
+      );
+
+      const pdfBuffer = Buffer.from(base64Data, "base64");
 
       await transporter.sendMail({
         from: `"JDB Infotech" <${"jdbinfotechsolution@gmail.com"}>`,
         to: student.email,
         subject: `🎓 Your JDB Infotech Admit Card - ${student.studentId}`,
+
         html: `
-          <div style="
-            font-family:Arial,sans-serif;
-            background:#f4f6f9;
-            padding:30px;
-          ">
+          <div style="font-family:Arial,sans-serif;background:#f4f6f9;padding:30px;">
+            <div style="max-width:650px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;">
 
-            <div style="
-              max-width:650px;
-              margin:auto;
-              background:#ffffff;
-              border-radius:12px;
-              overflow:hidden;
-            ">
-
-              <div style="
-                background:#123b68;
-                color:white;
-                padding:25px;
-                text-align:center;
-              ">
-                <h1 style="margin:0;">
-                  JDB INFOTECH
-                </h1>
-
-                <p style="margin:8px 0 0;">
-                  Admit Card
-                </p>
+              <div style="background:#123b68;color:white;padding:25px;text-align:center;">
+                <h1 style="margin:0;">JDB INFOTECH</h1>
+                <p style="margin:8px 0 0;">Admit Card</p>
               </div>
 
               <div style="padding:30px;">
@@ -505,13 +124,9 @@ browser = null;
                   Hello ${student.name || "Student"},
                 </h2>
 
-                <p style="
-                  font-size:15px;
-                  line-height:1.7;
-                  color:#444;
-                ">
-                  Your JDB Infotech admit card has been generated
-                  successfully.
+                <p style="font-size:15px;line-height:1.7;color:#444;">
+                  Your JDB Infotech admit card has been generated successfully.
+                  Please find your admit card attached with this email.
                 </p>
 
                 <div style="
@@ -520,7 +135,6 @@ browser = null;
                   border-radius:8px;
                   margin:20px 0;
                 ">
-
                   <p>
                     <strong>Student ID:</strong>
                     ${student.studentId}
@@ -528,17 +142,13 @@ browser = null;
 
                   <p>
                     <strong>Course:</strong>
-                    ${courseName}
+                    ${student.course?.name || "Not Assigned"}
                   </p>
-
                 </div>
 
-                <p style="
-                  font-size:14px;
-                  color:#555;
-                ">
-                  Please download the attached PDF and keep it
-                  safely for your examination/assessment.
+                <p style="font-size:14px;color:#555;">
+                  Please download and keep the attached PDF safely
+                  for your examination/assessment.
                 </p>
 
                 <p>
@@ -559,7 +169,6 @@ browser = null;
               </div>
 
             </div>
-
           </div>
         `,
 
@@ -578,17 +187,7 @@ browser = null;
       });
 
     } catch (error) {
-
-      console.error(
-        "Send admit card error:",
-        error
-      );
-
-      if (browser) {
-        try {
-          await browser.close();
-        } catch {}
-      }
+      console.error("Send admit card error:", error);
 
       return res.status(500).json({
         success: false,
