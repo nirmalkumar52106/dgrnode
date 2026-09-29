@@ -379,30 +379,20 @@ app.patch(
 
       // New Photo
 if (req.file) {
+  console.log("REQ.FILE:", req.file);
+
   const uploaded = await StudentuploadToCloudinary(req.file.buffer);
 
+  console.log("UPLOADED:", uploaded);
+  console.log("SECURE URL:", uploaded?.secure_url);
+
   if (!uploaded?.secure_url) {
-    throw new Error("Cloudinary URL not received");
+    throw new Error("Cloudinary secure_url not received");
   }
 
-  const photoUrl = uploaded.secure_url;
+  student.photo = uploaded.secure_url;
 
-  console.log("CLOUDINARY PHOTO URL:", photoUrl);
-
-  const updatedStudent = await Student.findOneAndUpdate(
-    { studentId },
-    {
-      $set: {
-        photo: photoUrl,
-      },
-    },
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
-
-  console.log("PHOTO SAVED IN DB:", updatedStudent?.photo);
+  console.log("PHOTO ASSIGNED:", student.photo);
 }
 
 console.log("===== BEFORE SAVE =====");
