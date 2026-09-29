@@ -378,13 +378,27 @@ app.patch(
       }
 
       // New Photo
-      if (req.file) {
-        const uploaded = await StudentuploadToCloudinary(
-          req.file.buffer
-        );
+     if (req.file) {
+  console.log("PHOTO RECEIVED:", req.file.originalname);
 
-        student.photo = uploaded.secure_url;
-      }
+  const uploaded = await StudentuploadToCloudinary(
+    req.file.buffer
+  );
+
+  console.log("CLOUDINARY RESPONSE:", uploaded);
+
+  if (!uploaded?.secure_url) {
+    throw new Error("Cloudinary upload failed - secure_url missing");
+  }
+
+  student.photo = uploaded.secure_url;
+
+  console.log("PHOTO URL:", student.photo);
+}
+
+await student.save();
+
+console.log("SAVED PHOTO:", student.photo);
 
       await student.save();
 
