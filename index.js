@@ -378,26 +378,48 @@ app.patch(
       }
 
       // New Photo
-     if (req.file) {
-  console.log("PHOTO RECEIVED:", req.file.originalname);
-
-  const uploaded = await StudentuploadToCloudinary(
-    req.file.buffer
-  );
-
-  console.log("CLOUDINARY RESPONSE:", uploaded);
+if (req.file) {
+  const uploaded = await StudentuploadToCloudinary(req.file.buffer);
 
   if (!uploaded?.secure_url) {
-    throw new Error("Cloudinary upload failed - secure_url missing");
+    throw new Error("Cloudinary URL not received");
   }
 
-  student.photo = uploaded.secure_url;
+  const photoUrl = uploaded.secure_url;
 
-  console.log("PHOTO URL:", student.photo);
+  console.log("CLOUDINARY PHOTO URL:", photoUrl);
+
+  const updatedStudent = await Student.findOneAndUpdate(
+    { studentId },
+    {
+      $set: {
+        photo: photoUrl,
+      },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  console.log("PHOTO SAVED IN DB:", updatedStudent?.photo);
 }
+
+console.log("===== BEFORE SAVE =====");
+console.log("Student ID:", student.studentId);
+console.log("Photo:", student.photo);
 
 await student.save();
 
+console.log("===== AFTER SAVE =====");
+console.log("Photo:", student.photo);
+
+const dbStudent = await Student.findOne({
+  studentId: student.studentId
+}).lean();
+
+console.log("===== FROM DATABASE =====");
+console.log("Photo:", dbStudent.photo);
 console.log("SAVED PHOTO:", student.photo);
 
       await student.save();
