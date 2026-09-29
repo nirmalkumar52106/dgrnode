@@ -31,7 +31,7 @@ const uploadToCloudinary = require("./config/uploadtocloud");
 const PlaceduploadToCloudinary = require("./config/Placeduploadtocloud");
 const Placement = require("./schemas/placement");
 const StudentuploadToCloudinary = require("./config/studentphoto");
-const puppeteer = require("puppeteer-core");
+
 const chromium = require("@sparticuz/chromium");
 
  
@@ -406,6 +406,7 @@ body {
    // ==============================
 // GENERATE PDF
 // ==============================
+const { default: puppeteer } = await import("puppeteer-core");
 
 browser = await puppeteer.launch({
   args: chromium.args,
