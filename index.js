@@ -31,7 +31,8 @@ const uploadToCloudinary = require("./config/uploadtocloud");
 const PlaceduploadToCloudinary = require("./config/Placeduploadtocloud");
 const Placement = require("./schemas/placement");
 const StudentuploadToCloudinary = require("./config/studentphoto");
-
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
 
  
 //main server
@@ -106,7 +107,7 @@ app.post(
 
       const photo =
         student?.photo ||
-        "https://via.placeholder.com/150?text=Student";
+        "";
 
       const dob = student?.dob
         ? new Date(student.dob).toLocaleDateString("en-IN")
@@ -402,60 +403,61 @@ body {
       // ==============================
       // GENERATE PDF
       // ==============================
-    const { default: puppeteer } = await import("puppeteer");
+   // ==============================
+// GENERATE PDF
+// ==============================
 
-      browser = await puppeteer.launch({
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-        ],
+browser = await puppeteer.launch({
+  args: chromium.args,
+  defaultViewport: chromium.defaultViewport,
+  executablePath: await chromium.executablePath(),
+  headless: chromium.headless,
+});
+
+const page = await browser.newPage();
+
+await page.setViewport({
+  width: 1200,
+  height: 900,
+  deviceScaleFactor: 1,
+});
+
+await page.setContent(admitCardHtml, {
+  waitUntil: "domcontentloaded",
+});
+
+// Wait for images
+await page.evaluate(async () => {
+  const images = Array.from(document.images);
+
+  await Promise.all(
+    images.map((img) => {
+      if (img.complete) {
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
       });
+    })
+  );
+});
 
-      const page = await browser.newPage();
+const pdfBuffer = await page.pdf({
+  format: "A4",
+  landscape: true,
+  printBackground: true,
+  margin: {
+    top: "10mm",
+    right: "10mm",
+    bottom: "10mm",
+    left: "10mm",
+  },
+});
 
-      await page.setViewport({
-        width: 1200,
-        height: 900,
-        deviceScaleFactor: 1,
-      });
-
-      await page.setContent(admitCardHtml, {
-        waitUntil: "networkidle0",
-      });
-
-      // Wait for Cloudinary image
-      await page.evaluate(async () => {
-        const images = Array.from(
-          document.images
-        );
-
-        await Promise.all(
-          images.map((img) => {
-            if (img.complete) return Promise.resolve();
-
-            return new Promise((resolve) => {
-              img.onload = resolve;
-              img.onerror = resolve;
-            });
-          })
-        );
-      });
-
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        landscape: true,
-        printBackground: true,
-        margin: {
-          top: "10mm",
-          right: "10mm",
-          bottom: "10mm",
-          left: "10mm",
-        },
-      });
-
-      await browser.close();
-      browser = null;
+await browser.close();
+browser = null;
 
       // ==============================
       // SEND EMAIL
