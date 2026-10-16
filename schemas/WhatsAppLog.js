@@ -57,4 +57,5 @@ const whatsappLogSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model("WhatsAppLog", whatsappLogSchema);
+const WaLogmodel = mongoose.model("WhatsAppLog", whatsappLogSchema);
+module.exports = WaLogmodel

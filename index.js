@@ -31,10 +31,11 @@ const uploadToCloudinary = require("./config/uploadtocloud");
 const PlaceduploadToCloudinary = require("./config/Placeduploadtocloud");
 const Placement = require("./schemas/placement");
 const StudentuploadToCloudinary = require("./config/studentphoto");
+const WaLogmodel = require("./schemas/WhatsAppLog");
 
 
 
- 
+
 //main server
 const app = express()
 
@@ -42,7 +43,7 @@ const app = express()
 
 app.use(bodyParser.json());
 app.use(express.json({ limit: "1000mb" }));
-app.use(express.urlencoded({ limit: "1000mb", extended: true })); 
+app.use(express.urlencoded({ limit: "1000mb", extended: true }));
 app.use(cors({ origin: "*", }));
 require("./schemas/mongodb")
 
@@ -302,11 +303,11 @@ app.post("/student-login", async (req, res) => {
 
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid credentials" });
-    } 
+    }
 
     const token = jwt.sign(
       { id: student._id },
-      "jdbinfotech", 
+      "jdbinfotech",
       { expiresIn: "7d" }
     );
 
@@ -323,7 +324,7 @@ app.get('/student-profile', async (req, res) => {
   if (!token) return res.json({ success: false, message: 'Unauthorized' });
 
   try {
-    const decoded = jwt.verify(token, 'jdbinfotech'); 
+    const decoded = jwt.verify(token, 'jdbinfotech');
     const student = await Student.findById(decoded.id);
     res.json({ success: true, student });
   } catch (err) {
@@ -499,39 +500,39 @@ app.patch(
       }
 
       // New Photo
-if (req.file) {
-  console.log("REQ.FILE:", req.file);
+      if (req.file) {
+        console.log("REQ.FILE:", req.file);
 
-  const uploaded = await StudentuploadToCloudinary(req.file.buffer);
+        const uploaded = await StudentuploadToCloudinary(req.file.buffer);
 
-  console.log("UPLOADED:", uploaded);
-  console.log("SECURE URL:", uploaded?.secure_url);
+        console.log("UPLOADED:", uploaded);
+        console.log("SECURE URL:", uploaded?.secure_url);
 
-  if (!uploaded?.secure_url) {
-    throw new Error("Cloudinary secure_url not received");
-  }
+        if (!uploaded?.secure_url) {
+          throw new Error("Cloudinary secure_url not received");
+        }
 
-  student.photo = uploaded.secure_url;
+        student.photo = uploaded.secure_url;
 
-  console.log("PHOTO ASSIGNED:", student.photo);
-}
+        console.log("PHOTO ASSIGNED:", student.photo);
+      }
 
-console.log("===== BEFORE SAVE =====");
-console.log("Student ID:", student.studentId);
-console.log("Photo:", student.photo);
+      console.log("===== BEFORE SAVE =====");
+      console.log("Student ID:", student.studentId);
+      console.log("Photo:", student.photo);
 
-await student.save();
+      await student.save();
 
-console.log("===== AFTER SAVE =====");
-console.log("Photo:", student.photo);
+      console.log("===== AFTER SAVE =====");
+      console.log("Photo:", student.photo);
 
-const dbStudent = await Student.findOne({
-  studentId: student.studentId
-}).lean();
+      const dbStudent = await Student.findOne({
+        studentId: student.studentId
+      }).lean();
 
-console.log("===== FROM DATABASE =====");
-console.log("Photo:", dbStudent.photo);
-console.log("SAVED PHOTO:", student.photo);
+      console.log("===== FROM DATABASE =====");
+      console.log("Photo:", dbStudent.photo);
+      console.log("SAVED PHOTO:", student.photo);
 
       await student.save();
 
@@ -654,7 +655,7 @@ app.post("/student-send-otp", async (req, res) => {
 
     res.json({
       success: true,
-      message: "OTP sent successfully" 
+      message: "OTP sent successfully"
     });
 
   } catch (error) {
@@ -785,7 +786,7 @@ app.get("/student-attendance", verifyStudent, async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching attendance" });
   }
 });
- 
+
 // Admin uploads a new test
 app.post("/create-test", verifyAdminOrStaff, async (req, res) => {
   try {
@@ -815,7 +816,7 @@ app.delete('/tests/:id', verifyAdminOrStaff, async (req, res) => {
     console.error(err);
     res.status(500).json({ message: 'Error deleting test' });
   }
-}); 
+});
 
 //find by id
 app.get('/tests/:id', async (req, res) => {
@@ -870,7 +871,7 @@ app.post("/submit-test", async (req, res) => {
   const submission = new TestResult({ studentId, testId, answers, score });
   await submission.save();
 
-  
+
   const student = await Student.findOne({ studentId });
 
 
@@ -936,7 +937,7 @@ app.get('/test/:testId', async (req, res) => {
 //test by id 
 app.get("/test-history/:studentId", async (req, res) => {
   try {
-    const submissions = await TestResult.find({ studentId : req.params.studentId }).populate("testId")
+    const submissions = await TestResult.find({ studentId: req.params.studentId }).populate("testId")
     res.json({ success: true, submissions });
   } catch (err) {
     console.error("Get Submissions Error:", err);
@@ -953,7 +954,7 @@ app.get('/testssss', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch tests' });
   }
 });
- 
+
 //top students
 app.get("/leaderboard/:testId", async (req, res) => {
   const top3 = await TestResult.find({ testId: req.params.testId })
@@ -991,7 +992,7 @@ app.get("/allstudents", verifyAdminOrStaff, async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to fetch students" });
   }
-}); 
+});
 
 app.get('/get-student', async (req, res) => {
   const { studentId } = req.query;
@@ -1090,7 +1091,7 @@ app.get('/studentswithtodayattendance', verifyAdminOrStaff, async (req, res) => 
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch all attendance records for today
-   const attendanceRecords = await Attendence.find({ date: today }).lean();
+    const attendanceRecords = await Attendence.find({ date: today }).lean();
 
     // Map studentId to attendance status
     const attendanceMap = {};
@@ -1127,7 +1128,7 @@ app.get('/studentswithtodayattendancestaff', verifyStaff, async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
 
     // Fetch all attendance records for today
-   const attendanceRecords = await Attendence.find({ date: today }).lean();
+    const attendanceRecords = await Attendence.find({ date: today }).lean();
 
     // Map studentId to attendance status
     const attendanceMap = {};
@@ -1220,7 +1221,7 @@ app.get('/getattendance/:studentId', verifyAdminOrStaff, async (req, res) => {
   }
 });
 
-app.get('/attendance-percentage/:studentId',  async (req, res) => {
+app.get('/attendance-percentage/:studentId', async (req, res) => {
   const { studentId } = req.params;
 
   const total = await Attendence.countDocuments({ studentId });
@@ -1304,40 +1305,40 @@ app.post('/payfees', verifyAdminOrStaff, async (req, res) => {
 
 
 //enquiryapis###################################################################
-app.post("/addenquiry", verifyAdminOrStaff, async(req,res)=>{
-    let enquiry = new Enquiry()
-    enquiry.namee = req.body.namee;
-    enquiry.mobile = req.body.mobile;
-    enquiry.email = req.body.email;
-    enquiry.adress = req.body.adress;
-    enquiry.dob = req.body.dob;
-    enquiry.cource = req.body.cource;
-    enquiry.responsee = req.body.responsee;
-    enquiry.statuss = req.body.statuss;
-    enquiry.comments = req.body.comments;
-    enquiry.enqdate = req.body.enqdate;
-   const doc = await enquiry.save()
-   console.log(doc)
-    console.log(req.body)
-    res.json(req.body)
-    try{
-        if(enquiry){
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"New Enquiry Added...!"
-            })
-        }
-        else{
-            res.status(404).json({
-                error:err,
-                message:"Something went wrong"
-            });
-        }
-    }catch(err){ 
-console.log(err)
+app.post("/addenquiry", verifyAdminOrStaff, async (req, res) => {
+  let enquiry = new Enquiry()
+  enquiry.namee = req.body.namee;
+  enquiry.mobile = req.body.mobile;
+  enquiry.email = req.body.email;
+  enquiry.adress = req.body.adress;
+  enquiry.dob = req.body.dob;
+  enquiry.cource = req.body.cource;
+  enquiry.responsee = req.body.responsee;
+  enquiry.statuss = req.body.statuss;
+  enquiry.comments = req.body.comments;
+  enquiry.enqdate = req.body.enqdate;
+  const doc = await enquiry.save()
+  console.log(doc)
+  console.log(req.body)
+  res.json(req.body)
+  try {
+    if (enquiry) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "New Enquiry Added...!"
+      })
     }
-   
+    else {
+      res.status(404).json({
+        error: err,
+        message: "Something went wrong"
+      });
+    }
+  } catch (err) {
+    console.log(err)
+  }
+
 });
 
 function makeChatId(mobile) {
@@ -1353,7 +1354,7 @@ function makeChatId(mobile) {
 }
 
 async function sendWaapiMessage(enquiry, message, campaignId) {
-  const log = await WhatsAppLog.create({
+  const log = await WaLogmodel.create({
     enquiryId: enquiry._id,
     name: enquiry.namee || "",
     mobile: enquiry.mobile,
@@ -1398,7 +1399,7 @@ async function sendWaapiMessage(enquiry, message, campaignId) {
     const providerMessageId =
       data.data?.data?._data?.id?._serialized || null;
 
-    await WhatsAppLog.updateOne(
+    await WaLogmodel.updateOne(
       { _id: log._id },
       {
         $set: {
@@ -1412,7 +1413,7 @@ async function sendWaapiMessage(enquiry, message, campaignId) {
 
     return { status: "sent", mobile: enquiry.mobile };
   } catch (error) {
-    await WhatsAppLog.updateOne(
+    await WaLogmodel.updateOne(
       { _id: log._id },
       {
         $set: {
@@ -1503,17 +1504,16 @@ app.post("/api/whatsapp/send-bulk", async (req, res) => {
         continue;
       }
 
-      const personalizedMessage = message
-        .replace(/\{\{name\}\}/g, enquiry.namee || "Student")
-        .replace(/\{\{course\}\}/g, enquiry.cource || "course");
-
       const result = await sendWaapiMessage(
         enquiry,
-        personalizedMessage,
-        campaignId
+        message.trim(),
+        require("crypto").randomUUID()
       );
 
-      results.push({ enquiryId: id, ...result });
+      return res.status(result.status === "sent" ? 200 : 502).json({
+        success: result.status === "sent",
+        result,
+      });
     }
 
     res.json({
@@ -1599,45 +1599,45 @@ app.get("/api/whatsapp/logs", async (req, res) => {
 
 
 //get
-app.get("/allenquiry" , verifyAdminOrStaff, async (req,res)=>{
-    const user = await Enquiry.find();
-    res.send(user);
+app.get("/allenquiry", verifyAdminOrStaff, async (req, res) => {
+  const user = await Enquiry.find();
+  res.send(user);
 });
 
 //delete
 
-app.delete("/allenquiry/:id", verifyAdminOrStaff, async(req,res)=>{
-    try{
-        const id = req.params.id;
-        const doc = await Enquiry.findByIdAndDelete(id)
-        console.log(req.body);      
-        if(doc){ 
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"Enquiry Deleted...!"
-            })
-        };
-    } catch(err) {
-        res.status(404).json({
-            error:err,
-            message:"Something went wrong"
-        });
-    }
+app.delete("/allenquiry/:id", verifyAdminOrStaff, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const doc = await Enquiry.findByIdAndDelete(id)
+    console.log(req.body);
+    if (doc) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "Enquiry Deleted...!"
+      })
+    };
+  } catch (err) {
+    res.status(404).json({
+      error: err,
+      message: "Something went wrong"
+    });
+  }
 })
 
 //get by id
-app.get("/allenquiry/:id", verifyAdminOrStaff, async(req,res)=>{
-    const id = req.params.id;
-    const result = await Enquiry.findOne({_id:id});
-    res.json({"user":result});
+app.get("/allenquiry/:id", verifyAdminOrStaff, async (req, res) => {
+  const id = req.params.id;
+  const result = await Enquiry.findOne({ _id: id });
+  res.json({ "user": result });
 });
 
 //enquiry update
-app.patch("/allenquiry/:id", verifyAdminOrStaff, async(req,res)=>{
-    const id = req.params.id;
-    const doc = await Enquiry.findByIdAndUpdate(id, req.body)     
-    res.json(req.body);
+app.patch("/allenquiry/:id", verifyAdminOrStaff, async (req, res) => {
+  const id = req.params.id;
+  const doc = await Enquiry.findByIdAndUpdate(id, req.body)
+  res.json(req.body);
 });
 
 
@@ -1711,17 +1711,16 @@ app.post(
               </p>
             </div>
 
-            ${
-              doc.blogimage
-                ? `
+            ${doc.blogimage
+            ? `
               <img
                 src="${doc.blogimage}"
                 alt="${doc.blogtitle}"
                 style="width:100%;display:block;"
               />
             `
-                : ""
-            }
+            : ""
+          }
 
            <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-top:20px;">
   <p>
@@ -1875,113 +1874,113 @@ app.get("/allblog", async (req, res) => {
 });
 
 
- 
+
 
 //get by slug 
-app.get("/allblog/:id", async(req,res)=>{
-    const slug = req.params.id;
-    const result = await Blog.findOne({slugurl:slug});
-    res.json(result);
+app.get("/allblog/:id", async (req, res) => {
+  const slug = req.params.id;
+  const result = await Blog.findOne({ slugurl: slug });
+  res.json(result);
 });
 
 //get by id
-app.get("/allblogs/:id", async(req,res)=>{
-    const id = req.params.id;
-    const result = await Blog.findOne({_id:id});
-    res.json({"result" : result});
+app.get("/allblogs/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await Blog.findOne({ _id: id });
+  res.json({ "result": result });
 });
 
 // delete blogs
-app.delete("/allblog/:id", verifyAdminOrStaff, async(req,res)=>{
-    try{
-        const id = req.params.id;
-        const doc = await Blog.findByIdAndDelete(id)
-        if(doc){ 
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"Blog Deleted...!"
-            })
-        };
-    } catch(err) {
-        res.status(404).json({
-            error:err,
-            message:"Something went wrong"
-        });
-    }
+app.delete("/allblog/:id", verifyAdminOrStaff, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const doc = await Blog.findByIdAndDelete(id)
+    if (doc) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "Blog Deleted...!"
+      })
+    };
+  } catch (err) {
+    res.status(404).json({
+      error: err,
+      message: "Something went wrong"
+    });
+  }
 })
 
 //update blogs
-app.patch("/allblog/:id", verifyAdminOrStaff, async(req,res)=>{
-    const id = req.params.id;
-    const doc = await Blog.findByIdAndUpdate(id, req.body)
-    if(doc){
-        res.json(req.body);
-    }      
+app.patch("/allblog/:id", verifyAdminOrStaff, async (req, res) => {
+  const id = req.params.id;
+  const doc = await Blog.findByIdAndUpdate(id, req.body)
+  if (doc) {
+    res.json(req.body);
+  }
 });
 
 
 
 //dgrapi
-app.post("/remove" ,async(req,res)=>{
-    const textapi = new Dgr({
-        text : req.body.text,
-    })
-    
+app.post("/remove", async (req, res) => {
+  const textapi = new Dgr({
+    text: req.body.text,
+  })
 
-    const doc = await textapi.save()
-     res.json(req.body)
-     try{
-         if(textapi){
-             res.status(200).json({
-                 doc:doc,
-                 status:true,
-                 message:"removed"
-             })
-         }
-         else{
-             res.status(404).json({
-                 error:err,
-                 message:"Something went wrong"
-             });
-         }
-     }catch(err){ 
- console.log(err)
-     }
+
+  const doc = await textapi.save()
+  res.json(req.body)
+  try {
+    if (textapi) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "removed"
+      })
+    }
+    else {
+      res.status(404).json({
+        error: err,
+        message: "Something went wrong"
+      });
+    }
+  } catch (err) {
+    console.log(err)
+  }
 })
 
 
-app.get("/getremovedata" , async(req,res)=>{
-    const textapi = await Dgr.find()
-    res.send(textapi)
+app.get("/getremovedata", async (req, res) => {
+  const textapi = await Dgr.find()
+  res.send(textapi)
 })
 
 
 //add courses##############################################################################
-app.post("/addcourse" , verifyAdminOrStaff, async(req,res)=>{
-    try {
-    const { cardimage ,
-         coursecategory , 
-         courcedesc ,
-          courcecreatedby
-          , courceprice , 
-          instructor, 
-          curriculum ,
-        courseoverview,
-       whatyoulearn,
-       slug,
+app.post("/addcourse", verifyAdminOrStaff, async (req, res) => {
+  try {
+    const { cardimage,
+      coursecategory,
+      courcedesc,
+      courcecreatedby
+      , courceprice,
+      instructor,
+      curriculum,
+      courseoverview,
+      whatyoulearn,
+      slug,
       title,
       metatitle,
       metadescription,
       metakeyword,
       coursestatus
-} = req.body;
+    } = req.body;
 
     // Step 1: Create Instructor
     const newInstructor = new Instructor(instructor)
     await newInstructor.save();
 
-  
+
     const curriculumIds = [];
     for (const item of curriculum) {
       const newCurriculum = new Curriculum(item);
@@ -1989,21 +1988,21 @@ app.post("/addcourse" , verifyAdminOrStaff, async(req,res)=>{
       curriculumIds.push(newCurriculum._id);
     }
 
-    
+
     const newCourse = new Course({
-      cardimage : cardimage,
-      coursecategory : coursecategory,
-      courcedesc : courcedesc,
-      courcecreatedby : courcecreatedby,
-      courceprice : courceprice,
-      courseoverview : courseoverview,
-      whatyoulearn : whatyoulearn,
-      slug : slug,
-      title : title,
-      metatitle : metatitle,
-      metadescription : metadescription,
-      metakeyword : metakeyword,
-      coursestatus : coursestatus,
+      cardimage: cardimage,
+      coursecategory: coursecategory,
+      courcedesc: courcedesc,
+      courcecreatedby: courcecreatedby,
+      courceprice: courceprice,
+      courseoverview: courseoverview,
+      whatyoulearn: whatyoulearn,
+      slug: slug,
+      title: title,
+      metatitle: metatitle,
+      metadescription: metadescription,
+      metakeyword: metakeyword,
+      coursestatus: coursestatus,
       instructor: newInstructor._id,
       curriculum: curriculumIds,
     });
@@ -2020,9 +2019,9 @@ app.post("/addcourse" , verifyAdminOrStaff, async(req,res)=>{
 
 })
 
-app.get("/allcourse",async(req,res)=>{
-    const courses = await Course.find({})
-    res.send(courses)
+app.get("/allcourse", async (req, res) => {
+  const courses = await Course.find({})
+  res.send(courses)
 })
 
 
@@ -2226,31 +2225,31 @@ app.patch(
   }
 );
 
-app.delete("/allcourse/:id", verifyAdminOrStaff, async(req,res)=>{
-    try{
-        const id = req.params.id;
-        const doc = await Course.findByIdAndDelete(id)      
-        if(doc){ 
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"Course Deleted...!"
-            })
-        };
-    } catch(err) {
-        res.status(404).json({
-            error:err,
-            message:"Something went wrong"
-        });
-    }
+app.delete("/allcourse/:id", verifyAdminOrStaff, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const doc = await Course.findByIdAndDelete(id)
+    if (doc) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "Course Deleted...!"
+      })
+    };
+  } catch (err) {
+    res.status(404).json({
+      error: err,
+      message: "Something went wrong"
+    });
+  }
 })
 
 //get by id
-app.get("/allcourse/:id", async(req,res)=>{
-    try {
-        
+app.get("/allcourse/:id", async (req, res) => {
+  try {
+
     const course = await Course.findById(req.params.id)
-      .populate("instructor") 
+      .populate("instructor")
       .populate("curriculum");
 
     if (!course) {
@@ -2265,11 +2264,11 @@ app.get("/allcourse/:id", async(req,res)=>{
 });
 
 //get by slug
-app.get("/allcourses/:id", async(req,res)=>{
-    try {
-        const slug = req.params.id;
-    const course = await Course.findOne({slug:slug})
-      .populate("instructor") 
+app.get("/allcourses/:id", async (req, res) => {
+  try {
+    const slug = req.params.id;
+    const course = await Course.findOne({ slug: slug })
+      .populate("instructor")
       .populate("curriculum");
 
     if (!course) {
@@ -2285,33 +2284,33 @@ app.get("/allcourses/:id", async(req,res)=>{
 
 //website Enquiry Api
 //enquiryapis###################################################################
-app.post("/webaddenq",async(req,res)=>{
-    let webenquiry = new WebEnq()
-    webenquiry.enqname = req.body.enqname;
-    webenquiry.enqmobile = req.body.enqmobile;
-    webenquiry.enqemail = req.body.enqemail;
-    webenquiry.enqCourse = req.body.enqCourse;
-    webenquiry.enqDate =  new Date();
-    webenquiry.isRead =  false;
-   const doc = await webenquiry.save()
-    res.json(req.body)
-    try{
-        if(webenquiry){
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"New Enquiry Added...!"
-            })
-        }
-        else{
-            res.status(404).json({
-                error:err,
-                message:"Something went wrong"
-            });
-        }
-    }catch(err){ 
-console.log(err)
+app.post("/webaddenq", async (req, res) => {
+  let webenquiry = new WebEnq()
+  webenquiry.enqname = req.body.enqname;
+  webenquiry.enqmobile = req.body.enqmobile;
+  webenquiry.enqemail = req.body.enqemail;
+  webenquiry.enqCourse = req.body.enqCourse;
+  webenquiry.enqDate = new Date();
+  webenquiry.isRead = false;
+  const doc = await webenquiry.save()
+  res.json(req.body)
+  try {
+    if (webenquiry) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "New Enquiry Added...!"
+      })
     }
+    else {
+      res.status(404).json({
+        error: err,
+        message: "Something went wrong"
+      });
+    }
+  } catch (err) {
+    console.log(err)
+  }
 });
 
 //notify enquiry
@@ -2330,30 +2329,30 @@ app.put("/markenquiryread/:id", verifyAdminOrStaff, async (req, res) => {
 
 
 //get
-app.get("/allwebaddenq", verifyAdminOrStaff, async (req,res)=>{
-    const webenqq = await WebEnq.find();
-    res.send(webenqq);
+app.get("/allwebaddenq", verifyAdminOrStaff, async (req, res) => {
+  const webenqq = await WebEnq.find();
+  res.send(webenqq);
 });
 
 //delete
 
-app.delete("/allwebaddenq/:id",verifyAdminOrStaff, async(req,res)=>{
-    try{
-        const id = req.params.id;
-        const doc = await WebEnq.findByIdAndDelete(id)      
-        if(doc){ 
-            res.status(200).json({
-                doc:doc,
-                status:true,
-                message:"Enquiry Deleted...!"
-            })
-        };
-    } catch(err) {
-        res.status(404).json({
-            error:err,
-            message:"Something went wrong"
-        });
-    }
+app.delete("/allwebaddenq/:id", verifyAdminOrStaff, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const doc = await WebEnq.findByIdAndDelete(id)
+    if (doc) {
+      res.status(200).json({
+        doc: doc,
+        status: true,
+        message: "Enquiry Deleted...!"
+      })
+    };
+  } catch (err) {
+    res.status(404).json({
+      error: err,
+      message: "Something went wrong"
+    });
+  }
 })
 
 
@@ -2507,7 +2506,7 @@ app.post("/api/attendance/mark", verifyAdminOrStaff, async (req, res) => {
 });
 
 // Get Monthly Attendance
-app.get("/api/attendance/:staffId/:month", verifyAdminOrStaff,  async (req, res) => {
+app.get("/api/attendance/:staffId/:month", verifyAdminOrStaff, async (req, res) => {
   try {
     const staffId = req.params.staffId;
     const month = req.params.month; // "YYYY-MM"
@@ -2545,7 +2544,7 @@ app.get("/api/attendance/:staffId/:month", verifyAdminOrStaff,  async (req, res)
 // ===================== Salary API =====================
 
 // Attendance Based Salary
-app.get("/api/salary/:staffId/:month", verifyAdminOrStaff ,  async (req, res) => {
+app.get("/api/salary/:staffId/:month", verifyAdminOrStaff, async (req, res) => {
   try {
     const staff = await Staff.findById(req.params.staffId);
     if (!staff) return res.status(404).json({ error: "Staff not found" });
@@ -2620,7 +2619,7 @@ app.post("/api/staff/login", async (req, res) => {
     // 👉 Case 1: Hashed password
     if (staff.password.startsWith("$2b$")) {
       isMatch = await bcrypt.compare(password, staff.password);
-    } 
+    }
     // 👉 Case 2: Old plain password (IMPORTANT FIX)
     else {
       isMatch = password === staff.password;
@@ -2745,7 +2744,7 @@ app.post("/adminlogin", async (req, res) => {
         role: user.role,
         permissions: user.permissions
       },
-       "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn", // 🔥 use env
+      "asdfghjiuwetyhbnergbh853njgsdfysf2wsedrfthghybn", // 🔥 use env
       { expiresIn: "7d" }
     );
 
@@ -2759,7 +2758,7 @@ app.post("/adminlogin", async (req, res) => {
     console.log(err);
     res.status(500).json({ msg: "Server error" });
   }
-}); 
+});
 
 
 app.get("/admin-profile", verifyAdminOrStaff, async (req, res) => {
@@ -2905,7 +2904,7 @@ const isValidTimeSlot = (start, end) => {
 };
 
 
-app.post("/api/batch/create", verifyAdminOrStaff , async (req, res) => {
+app.post("/api/batch/create", verifyAdminOrStaff, async (req, res) => {
   try {
     const { name, start, end, staffId, course, currentSubject, currentTopic } = req.body;
 
@@ -3018,14 +3017,14 @@ app.post("/api/batch/remove-student", verifyAdminOrStaff, async (req, res) => {
 
 app.put("/api/batch/update/:id", async (req, res) => {
   try {
-    const { 
-      name, 
-      start, 
-      end, 
-      staffId, 
-      course, 
-      currentSubject, 
-      currentTopic 
+    const {
+      name,
+      start,
+      end,
+      staffId,
+      course,
+      currentSubject,
+      currentTopic
     } = req.body;
 
     const batch = await Batch.findById(req.params.id);
@@ -3360,7 +3359,7 @@ app.get("/api/related/:category", async (req, res) => {
 });
 
 
-app.post("/certificate/add", verifyAdminOrStaff , async (req, res) => {
+app.post("/certificate/add", verifyAdminOrStaff, async (req, res) => {
 
   try {
 
@@ -3428,7 +3427,7 @@ GET ALL CERTIFICATES
 ========================================
 */
 
-app.get("/certificate/all", verifyAdminOrStaff , async (req, res) => {
+app.get("/certificate/all", verifyAdminOrStaff, async (req, res) => {
 
   try {
 
@@ -3460,7 +3459,7 @@ GET SINGLE CERTIFICATE
 ========================================
 */
 
-app.get("/certificate/:id",  async (req, res) => {
+app.get("/certificate/:id", async (req, res) => {
 
   try {
 
@@ -3497,7 +3496,7 @@ UPDATE CERTIFICATE
 ========================================
 */
 
-app.patch("/certificate/update/:id",verifyAdminOrStaff , async (req, res) => {
+app.patch("/certificate/update/:id", verifyAdminOrStaff, async (req, res) => {
 
   try {
 
@@ -3541,7 +3540,7 @@ DELETE CERTIFICATE
 ========================================
 */
 
-app.delete("/certificate/delete/:id", verifyAdminOrStaff , async (req, res) => {
+app.delete("/certificate/delete/:id", verifyAdminOrStaff, async (req, res) => {
 
   try {
 
@@ -4018,6 +4017,6 @@ app.patch(
 
 
 
-app.listen(5000,()=>{
+app.listen(5000, () => {
   console.log("App started...")
 })
