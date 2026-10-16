@@ -1340,6 +1340,263 @@ console.log(err)
    
 });
 
+function makeChatId(mobile) {
+  let number = String(mobile || "").replace(/\D/g, "");
+
+  if (number.length === 10) number = "91" + number;
+
+  if (!/^91[6-9]\d{9}$/.test(number)) {
+    throw new Error("Invalid Indian mobile number");
+  }
+
+  return number + "@c.us";
+}
+
+async function sendWaapiMessage(enquiry, message, campaignId) {
+  const log = await WhatsAppLog.create({
+    enquiryId: enquiry._id,
+    name: enquiry.namee || "",
+    mobile: enquiry.mobile,
+    message,
+    campaignId,
+    status: "pending",
+  });
+
+  try {
+    const url =
+      `https://waapi.app/api/v1/instances/` +
+      `${"106214"}/client/action/send-message`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${"9bL5kCD9c6zGDJenxaFCFI0JMiH6TUg3J7lTFQj840d3848a"}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        chatId: makeChatId(enquiry.mobile),
+        message,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (
+      !response.ok ||
+      data.status !== "success" ||
+      data.data?.status !== "success"
+    ) {
+      throw new Error(
+        data.message ||
+        data.data?.message ||
+        `WaAPI request failed: HTTP ${response.status}`
+      );
+    }
+
+    const providerMessageId =
+      data.data?.data?._data?.id?._serialized || null;
+
+    await WhatsAppLog.updateOne(
+      { _id: log._id },
+      {
+        $set: {
+          status: "sent",
+          providerMessageId,
+          sentAt: new Date(),
+          errorMessage: "",
+        },
+      }
+    );
+
+    return { status: "sent", mobile: enquiry.mobile };
+  } catch (error) {
+    await WhatsAppLog.updateOne(
+      { _id: log._id },
+      {
+        $set: {
+          status: "failed",
+          errorMessage: error.message,
+        },
+      }
+    );
+
+    return {
+      status: "failed",
+      mobile: enquiry.mobile,
+      error: error.message,
+    };
+  }
+}
+
+
+app.post("/api/whatsapp/send/:id", async (req, res) => {
+  try {
+    const enquiry = await Enquiry.findById(req.params.id);
+    const { message } = req.body;
+
+    if (!enquiry) {
+      return res.status(404).json({ message: "Enquiry not found" });
+    }
+
+    if (!message?.trim()) {
+      return res.status(400).json({ message: "Message required" });
+    }
+
+    const personalizedMessage = message
+      .replace(/\{\{name\}\}/g, enquiry.namee || "Student")
+      .replace(/\{\{course\}\}/g, enquiry.cource || "course");
+
+    const result = await sendWaapiMessage(
+      enquiry,
+      personalizedMessage,
+      require("crypto").randomUUID()
+    );
+
+    res.status(200).json({ success: result.status === "sent", result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/api/whatsapp/send-bulk", async (req, res) => {
+  try {
+    const { enquiryIds, message } = req.body;
+
+    if (
+      !Array.isArray(enquiryIds) ||
+      !enquiryIds.length ||
+      enquiryIds.length > 100
+    ) {
+      return res.status(400).json({
+        message: "Please Select 1 to 100 enquiry",
+      });
+    }
+
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ message: "Message required" });
+    }
+
+    const ids = [...new Set(enquiryIds.map(String))];
+
+    if (ids.some(id => !/^[a-f\d]{24}$/i.test(id))) {
+      return res.status(400).json({ message: "Invalid enquiry ID" });
+    }
+
+    const enquiries = await Enquiry.find({ _id: { $in: ids } });
+    const byId = new Map(
+      enquiries.map(item => [String(item._id), item])
+    );
+    const campaignId = require("crypto").randomUUID();
+    const results = [];
+
+    for (const id of ids) {
+      const enquiry = byId.get(id);
+
+      if (!enquiry || !enquiry.mobile) {
+        results.push({
+          enquiryId: id,
+          status: "failed",
+          error: enquiry ? "Mobile missing" : "Enquiry not found",
+        });
+        continue;
+      }
+
+      const personalizedMessage = message
+        .replace(/\{\{name\}\}/g, enquiry.namee || "Student")
+        .replace(/\{\{course\}\}/g, enquiry.cource || "course");
+
+      const result = await sendWaapiMessage(
+        enquiry,
+        personalizedMessage,
+        campaignId
+      );
+
+      results.push({ enquiryId: id, ...result });
+    }
+
+    res.json({
+      success: true,
+      campaignId,
+      total: ids.length,
+      sent: results.filter(x => x.status === "sent").length,
+      failed: results.filter(x => x.status === "failed").length,
+      results,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Enquiry list
+app.get("/api/whatsapp/enquiries", async (req, res) => {
+  try {
+    const enquiries = await Enquiry.find()
+      .select("namee mobile email cource createdAt")
+      .sort({ createdAt: -1 })
+      .limit(500);
+
+    res.json(enquiries);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Statistics
+app.get("/api/whatsapp/stats", async (req, res) => {
+  try {
+    const [totalEnquiries, grouped, sentEnquiryIds] = await Promise.all([
+      Enquiry.countDocuments(),
+      WhatsAppLog.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
+      WhatsAppLog.distinct("enquiryId", { status: "sent" }),
+    ]);
+
+    const stats = {
+      totalEnquiries,
+      totalAttempts: 0,
+      sent: 0,
+      failed: 0,
+      pending: 0,
+      enquiriesWithSuccessfulSend: sentEnquiryIds.length,
+      enquiriesNeverSuccessfullySent: Math.max(
+        0, totalEnquiries - sentEnquiryIds.length
+      ),
+    };
+
+    grouped.forEach(item => {
+      stats[item._id] = item.count;
+      stats.totalAttempts += item.count;
+    });
+
+    res.json({ success: true, stats });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Message logs
+app.get("/api/whatsapp/logs", async (req, res) => {
+  try {
+    const filter = {};
+
+    if (["sent", "failed", "pending"].includes(req.query.status)) {
+      filter.status = req.query.status;
+    }
+
+    const logs = await WhatsAppLog.find(filter)
+      .populate("enquiryId", "namee mobile cource")
+      .sort({ createdAt: -1 })
+      .limit(200);
+
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 //get
 app.get("/allenquiry" , verifyAdminOrStaff, async (req,res)=>{
